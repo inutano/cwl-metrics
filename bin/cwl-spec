@@ -50,8 +50,9 @@ check_cmd() {
 
 check_dependencies() {
   check_cmd "git"
-  # check_cmd "docker"
-  # check_cmd "docker-compose"
+  check_cmd "perl"
+  check_cmd "docker"
+  check_cmd "docker-compose"
 }
 
 fetch_cwlspec_repo() {
