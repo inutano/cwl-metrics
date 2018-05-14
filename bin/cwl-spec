@@ -112,13 +112,37 @@ cwl_spec_status() {
 }
 
 ## Start CWL-spec processes and containers
+es_endpoint() {
+  host=$(cat ${CWLSPEC_DIR}/config | awk -F'=' '/^ES_HOST/ { print $2 }')
+  port=$(cat ${CWLSPEC_DIR}/config | awk -F'=' '/^ES_PORT/ { print $2 }')
+  if [[ -z ${host} ]]; then host=localhost; fi
+  if [[ -z ${port} ]]; then port=9200; fi
+  echo "http://${host}:${port}"
+}
+
+check_es_index() {
+  echo "Creating Elasticsearch index..."
+  local ep="$(es_endpoint)"
+  while [[ -z $(curl "${ep}/workflow" | grep workflow_log) ]]; do
+    sleep 1
+  done
+  curl "${ep}/telegraf"
+  curl "${ep}/workflow"
+}
+
 start_cwl_spec() {
   echo "Starting CWL-spec..."
+  perl "${CWLSPEC_DIR}/bin/init.pl" start
+  # Check setup container down and index of ES is available
+  check_es_index
+  echo "CWL-spec is running."
 }
 
 ## Stop CWL-spec processes and containers
 stop_cwl_spec() {
   echo "Stopping CWL-spec..."
+  perl "${CWLSPEC_DIR}/bin/init.pl" stop
+  echo "CWL-spec is stopped."
 }
 
 ## List all spec data of workflows and tools stored in ES
