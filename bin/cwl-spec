@@ -123,11 +123,11 @@ es_endpoint() {
 check_es_index() {
   echo "Creating Elasticsearch index..."
   local ep="$(es_endpoint)"
-  while [[ -z $(curl "${ep}/workflow" | grep workflow_log) ]]; do
+  while [[ -z $(curl -s "${ep}/workflow" | grep workflow_log) ]]; do
     sleep 1
   done
-  curl "${ep}/telegraf"
-  curl "${ep}/workflow"
+  echo $(curl -s "${ep}/telegraf")
+  echo $(curl -s "${ep}/workflow")
 }
 
 start_cwl_spec() {
@@ -135,7 +135,7 @@ start_cwl_spec() {
   perl "${CWLSPEC_DIR}/bin/init.pl" start
   # Check setup container down and index of ES is available
   check_es_index
-  echo "CWL-spec is running."
+  echo -e "\nCWL-spec is running."
 }
 
 ## Stop CWL-spec processes and containers
