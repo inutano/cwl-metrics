@@ -54,9 +54,32 @@ check_dependencies() {
   # check_cmd "docker-compose"
 }
 
-fetch_github_repo() {
-  GH_REPO_URL="https://github.com/inutano/cwl-spec"
-  git clone "${GH_REPO_URL}" "${CWLSPEC_DIR}"
+fetch_cwlspec_repo() {
+  local url="https://github.com/inutano/cwl-spec"
+  echo "Installing cwlspec libraries at ${CWLSPEC_DIR}..."
+  git clone "${url}" "${CWLSPEC_DIR}"
+}
+
+fetch_dmc_repo(){
+  local url="https://github.com/inutano/docker-metrics-collector"
+  local dmc_repo="${CWLSPEC_DIR}/repos/dmc"
+  echo "Installing docker metrics collector at ${dmc_repo}..."
+  mkdir -p "${CWLSPEC_DIR}/repos"
+  git clone "${url}" "${dmc_repo}"
+}
+
+generate_config(){
+  echo "Generating config file at ${CWLSPEC_DIR}/config ..."
+  cat  > "${CWLSPEC_DIR}/config" <<-EOS
+ES_HOST=${ES_HOST}
+ES_PORT=${ES_PORT}
+DMC_DIR_PATH=${HOME}/.cwlspec/repos/dmc
+EOS
+}
+
+pull_containers(){
+  echo "Pulling containers..."
+  docker pull "yyabuki/docker-cwllog-generator:latest"
 }
 
 init_cwl_spec() {
@@ -66,7 +89,11 @@ init_cwl_spec() {
   else
     echo "Initializing CWL-spec..."
     check_dependencies
-    fetch_github_repo
+    fetch_cwlspec_repo
+    fetch_dmc_repo
+    generate_config
+    pull_containers
+    echo "CWL-spec initialization complete. Starting system..."
   fi
 }
 
