@@ -98,6 +98,18 @@ init_cwl_spec() {
   fi
 }
 
+## Show CWL-spec status
+cwl_spec_status() {
+  pid_file="/tmp/cwllog_pid"
+  if [[ -e "${pid_file}" ]]; then
+    echo "cwl-spec is running."
+    exit 0
+  else
+    echo "cwl-spec is not running."
+    exit 1
+  fi
+}
+
 ## Start CWL-spec processes and containers
 start_cwl_spec() {
   echo "Starting CWL-spec..."
@@ -122,6 +134,9 @@ else
   while [[ $# -gt 0 ]]; do
     key=${1}
     case ${key} in
+      status)
+        cwl_spec_status
+        ;;
       start)
         start_cwl_spec
         ;;
