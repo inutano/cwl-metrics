@@ -30,6 +30,7 @@ Usage: cwl-spec [command] [options...]
 Commands:
   start    Run CWL-spec daemon and containers
   stop     Stop daemon and containers
+  status   Show CWL-spec system status
   list     List spec data stored in Elasticsearch
 
 HELP
