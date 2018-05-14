@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+# cwl-spec
+#   usage:
+#     cwl-spec [start|stop|list] <options>
+#
+set -e
+
+#
+# Variables
+#
+VERSION="20180514"
+CWLSPEC_DIR="${HOME}/.cwlspec"
+
+#
+# Load functions
+#
+
+## Version
+version() {
+  echo "cwl-spec version ${VERSION}"
+}
+
+## Help
+help() {
+  cat <<-HELP
+
+cwl-spec version ${VERSION}
+Usage: cwl-spec [command] [options...]
+Commands:
+  start    Run CWL-spec daemon and containers
+  stop     Stop daemon and containers
+  list     List spec data stored in Elasticsearch
+
+HELP
+}
+
+## Install/Initialize CWL-spec
+check_cmd() {
+  cmd=${1}
+  printf "Checking ${cmd}..."
+  if [[ -e $(which ${cmd}) ]]; then
+    echo "OK."
+  else
+    echo -e "\nERROR: ${cmd} not found."
+    echo "Failed to init CWL-spec"
+    exit 1
+  fi
+}
+
+check_dependencies() {
+  check_cmd "git"
+  # check_cmd "docker"
+  # check_cmd "docker-compose"
+}
+
+fetch_github_repo() {
+  GH_REPO_URL="https://github.com/inutano/cwl-spec"
+  git clone "${GH_REPO_URL}" "${CWLSPEC_DIR}"
+}
+
+init_cwl_spec() {
+  if [[ -e "${CWLSPEC_DIR}" ]]; then
+    help
+    exit 0
+  else
+    echo "Initializing CWL-spec..."
+    check_dependencies
+    fetch_github_repo
+  fi
+}
+
+## Start CWL-spec processes and containers
+start_cwl_spec() {
+  echo "Starting CWL-spec..."
+}
+
+## Stop CWL-spec processes and containers
+stop_cwl_spec() {
+  echo "Stopping CWL-spec..."
+}
+
+## List all spec data of workflows and tools stored in ES
+list_data() {
+  echo "Fetching data..."
+}
+
+#
+# Exec: init if no arguments specified, otherwise select command
+#
+if [[ $# -eq 0 ]]; then
+  init_cwl_spec
+else
+  while [[ $# -gt 0 ]]; do
+    key=${1}
+    case ${key} in
+      start)
+        start_cwl_spec
+        ;;
+      stop)
+        stop_cwl_spec
+        ;;
+      restart)
+        stop_cwl_spec
+        start_cwl_spec
+        ;;
+      list)
+        list_data
+        ;;
+      -v|--version)
+        version
+        exit 0
+        ;;
+      *)
+        help
+        exit 0
+        ;;
+    esac
+    shift
+  done
+fi
