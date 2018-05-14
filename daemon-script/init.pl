@@ -19,7 +19,7 @@ sub setting {
     my $home = $ENV{"HOME"};
 
     if (!open(CONFIG, "$home/.cwlspec/config")) {
-        die "File open failed: ~/.cwlspec/config\n";
+        die "Failed to open file: ~/.cwlspec/config\n";
     }
     while (my $dataLine = <CONFIG>) {
         chomp($dataLine);
@@ -49,7 +49,7 @@ sub setting {
 
 sub daemonize {
 
-    ### first fork.
+    ### first fork
     my $pid = fork();
     if ($pid < 0) {
         exit(-1)
@@ -58,10 +58,10 @@ sub daemonize {
         exit(0);
     }
     chdir("/");
-    POSIX::umask(0) || die "Could not decouple from parent environment\n";
-    POSIX::setsid() || die "Could not decouple from parent environment\n";
+    POSIX::umask(0) || die "Failed to daemonize: POSIX::umask()\n";
+    POSIX::setsid() || die "Failed to daemonize: POSIX::setsid()\n";
 
-    ### second fork.
+    ### second fork
     $pid = fork();
     if ($pid < 0) {
         exit(-1);
@@ -92,7 +92,7 @@ sub start {
     if (!open(PID, "$pidFile")) {
         $gPid = "";
     } else {
-        print "$pidFile file already exists. Please check whether this daemon is running or not.\n";
+        print "$pidFile file exists: monitoring process is already running.\n";
         exit(-1);
         close(PID);
     }
@@ -104,7 +104,7 @@ sub start {
 sub stop {
 
     if (!open(PID, "$pidFile")) {
-        print "$pidFile does't exist. Please check whether this daemon is running or not.\n";
+        print "$pidFile not found: monitoring process is not running.\n";
     }
     my $pid = <PID>;
     chomp($pid);
@@ -149,7 +149,7 @@ sub run {
     setting();
     # start docker-compose for docker-metrics-collector.
     if ($dmcDir eq "") {
-        die "docker-compose.yaml path must be set in the ~/.cwlspec/config file.\n";
+        die "ERROR: the docker-metrics-collector directory path not found in ~/.cwlspec/config\n";
     }
     if ($esHost ne "" && $esPort ne "") {
         system("export ES_HOST=$esHost");
@@ -288,7 +288,7 @@ sub get_cid_lists_from_cidfiles {
     my $cidsRef = $_[1]; # array reference.
 
     if (!opendir(RESDIR, "$resDir")) {
-        die "Directory open failed: $resDir\n";
+        die "Failed to open directory: $resDir\n";
     }
     while (my $resFile = readdir RESDIR) {
         chomp($resFile);
@@ -309,7 +309,7 @@ sub get_yaml_json_file_path {
     my $pidResDirFile = $_[0];
 
     if (!open(PIDFILE, "$pidResDirFile")) {
-        die "File open failed: $pidResDirFile\n";
+        die "Failed to open file: $pidResDirFile\n";
     }
     my $pidLine = <PIDFILE>;
     close(PIDFILE);
