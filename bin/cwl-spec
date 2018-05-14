@@ -155,6 +155,7 @@ list_data() {
 #
 if [[ $# -eq 0 ]]; then
   init_cwl_spec
+  start_cwl_spec
 else
   while [[ $# -gt 0 ]]; do
     key=${1}
