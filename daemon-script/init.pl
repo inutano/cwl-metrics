@@ -18,8 +18,8 @@ sub setting {
 
     my $home = $ENV{"HOME"};
 
-    if (!open(CONFIG, "$home/.cwlmetrics/config")) {
-        die "File open failed: ~/.cwlmetrics/config\n";
+    if (!open(CONFIG, "$home/.cwlspec/config")) {
+        die "File open failed: ~/.cwlspec/config\n";
     }
     while (my $dataLine = <CONFIG>) {
         chomp($dataLine);
@@ -64,7 +64,7 @@ sub daemonize {
     ### second fork.
     $pid = fork();
     if ($pid < 0) {
-        exit(-1); 
+        exit(-1);
     }
     if ($pid > 0) {
         exit(0);
@@ -145,11 +145,11 @@ sub run {
     my %pidResDirPath = ();
     my %workflowName = ();
 
-    # read .cwlmetrics/config file.
+    # read .cwlspec/config file.
     setting();
     # start docker-compose for docker-metrics-collector.
     if ($dmcDir eq "") {
-        die "docker-compose.yaml path must be set in the ~/.cwlmetrics/config file.\n";
+        die "docker-compose.yaml path must be set in the ~/.cwlspec/config file.\n";
     }
     if ($esHost ne "" && $esPort ne "") {
         system("export ES_HOST=$esHost");
@@ -257,7 +257,7 @@ sub get_cwltool_exec_process {
                 $pidResDirFile .= $pid;
                 system("echo '$contents' > $pidResDirFile");
                 ${$pidResDirPathRef}{$pid} = $pidResDirFile;
-                ### get the yaml/json file path. 
+                ### get the yaml/json file path.
                 my $yamlJsonPath = get_yaml_json_file_path($pidResDirFile);
                 ${$yamlPathRef}{$pid} = $yamlJsonPath;
                 ### get the stderr log file path.
@@ -305,7 +305,7 @@ sub get_cid_lists_from_cidfiles {
 
 
 sub get_yaml_json_file_path {
- 
+
     my $pidResDirFile = $_[0];
 
     if (!open(PIDFILE, "$pidResDirFile")) {
@@ -316,7 +316,7 @@ sub get_yaml_json_file_path {
     chomp($pidLine);
     my @pidInfo = split("	", $pidLine);
     my $pid = $pidInfo[0];
-    my @commands = split(" ", $pidInfo[2]); 
+    my @commands = split(" ", $pidInfo[2]);
     my $yamlDir = dirname($commands[1]);
     my $yamlName = basename($commands[1]);
 
@@ -420,7 +420,7 @@ sub send_logs_to_es {
         $port = "9200";
     }
     my $command = "curl -H \"Content-Type: application/json\" -XPOST '$host:$port/workflow/workflow_log/".$uuid."?pretty' --data-binary \@".$cwlLog;
-    system("$command"); 
+    system("$command");
 
 }
 
