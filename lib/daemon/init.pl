@@ -18,8 +18,8 @@ sub setting {
 
     my $home = $ENV{"HOME"};
 
-    if (!open(CONFIG, "$home/.cwlspec/config")) {
-        die "Failed to open file: ~/.cwlspec/config\n";
+    if (!open(CONFIG, "$home/.cwlmetrics/config")) {
+        die "Failed to open file: ~/.cwlmetrics/config\n";
     }
     while (my $dataLine = <CONFIG>) {
         chomp($dataLine);
@@ -145,11 +145,11 @@ sub run {
     my %pidResDirPath = ();
     my %workflowName = ();
 
-    # read .cwlspec/config file.
+    # read .cwlmetrics/config file.
     setting();
     # start docker-compose for docker-metrics-collector.
     if ($dmcDir eq "") {
-        die "ERROR: the docker-metrics-collector directory path not found in ~/.cwlspec/config\n";
+        die "ERROR: the docker-metrics-collector directory path not found in ~/.cwlmetrics/config\n";
     }
     if ($esHost ne "" && $esPort ne "") {
         system("export ES_HOST=$esHost");
