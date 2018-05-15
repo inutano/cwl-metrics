@@ -132,7 +132,7 @@ check_es_index() {
 
 start_cwl_spec() {
   echo "Starting CWL-spec..."
-  perl "${CWLSPEC_DIR}/bin/init.pl" start
+  perl "${CWLSPEC_DIR}/lib/daemon/init.pl" start
   # Check setup container down and index of ES is available
   check_es_index
   echo -e "\nCWL-spec is running."
@@ -141,7 +141,7 @@ start_cwl_spec() {
 ## Stop CWL-spec processes and containers
 stop_cwl_spec() {
   echo "Stopping CWL-spec..."
-  perl "${CWLSPEC_DIR}/bin/init.pl" stop
+  perl "${CWLSPEC_DIR}/lib/daemon/init.pl" stop
   echo "CWL-spec is stopped."
 }
 
