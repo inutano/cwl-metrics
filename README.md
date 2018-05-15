@@ -1,10 +1,11 @@
 # CWL-spec
 
-CWL-spec is a set of tools to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-spec launches a daemon process to catch new `cwltool` processes, and [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the data in.
+CWL-spec is a framework to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-spec launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
 
 ## Prerequisites
 
 - `git`
+- `curl`
 - `perl`
 - `docker`
 - `docker-compose`
@@ -12,23 +13,29 @@ CWL-spec is a set of tools to collect and analyze computational resource usage o
 
 ## Install
 
-Use `curl` to fetch the install script and exec via bash command as:
+Use `curl` to fetch the install script from GitHub and exec via bash command as:
 
 ```
 $ curl "https://raw.githubusercontent.com/inutano/cwl-spec/master/bin/cwl-spec" | bash
 ```
 
-This will check prerequisites, create `$HOME/.cwlspec`, and fetch config files, required scripts, and docker containers.
+This will do followings:
+
+- Check prerequisites
+- Create `$HOME/.cwlspec`
+- Fetch scripts and required docker containers
+- Generate config files
+- Run CWL-spec
 
 ## Usage
 
 ### Launch CWL-spec system
 
-The system will start automatically after the installation. The script to control the system `cwl-spec` is installed in `$HOME/.cwlspec/bin/cwl-spec`. Below are the commands:
+CWL-spec will start automatically after the installation. The script to control the system `cwl-spec` is at `$HOME/.cwlspec/bin/cwl-spec`. Do any of followings to control the system:
 
-- `cwl-spec status`: Tells if the system is running
-- `cwl-spec start`: Launches metrics collection system
-- `cwl-spec stop`: Stops metrics collection system
+- `cwl-spec status`: shows if the system is running
+- `cwl-spec start`: launches metrics collection system
+- `cwl-spec stop`: stops metrics collection system
 
 ### Collect workflow resource usage
 
