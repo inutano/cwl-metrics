@@ -60,7 +60,7 @@ $ cd /home/inutano/workflows/kallisto
 $ ls
 kallisto.cwl kallisto.yml
 $ mkdir result
-$ cwltool --debug --leave-container --timestamps --compute-checksum --record-container-id --cidfile-dir $(pwd)/result --outdir $(pwd)/result 2> $(pwd)/result/cwltool.log
+$ cwltool --debug --leave-container --timestamps --compute-checksum --record-container-id --cidfile-dir $(pwd)/result --outdir $(pwd)/result kallisto.cwl kallisto.yml 2> $(pwd)/result/cwltool.log 
 ```
 
 ## Usage: summarize workflow metrics
