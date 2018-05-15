@@ -51,6 +51,7 @@ check_cmd() {
 
 check_dependencies() {
   check_cmd "git"
+  check_cmd "curl"
   check_cmd "perl"
   check_cmd "docker"
   check_cmd "docker-compose"
