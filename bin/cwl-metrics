@@ -57,6 +57,19 @@ check_dependencies() {
   check_cmd "docker-compose"
 }
 
+check_vm_max_map_count() {
+  case "$(uname -s)" in
+    Linux*)
+      if [[ $(sysctl vm.max_map_count) -lt 262144 ]]; then
+        echo "vm.max_map_count is not enough for launching Elasticsearch"
+        echo "Set it to 262144 by the following command"
+        echo "  sysctl -w vm.max_map_count=262144"
+        exit 1
+      fi
+      ;;
+  esac
+}
+
 fetch_cwlmetrics_repo() {
   local url="https://github.com/inutano/cwl-metrics"
   echo "Installing cwlmetrics libraries at ${CWL_METRICS_DIR}..."
@@ -92,6 +105,7 @@ init_cwl_metrics() {
   else
     echo "Initializing CWL-metrics..."
     check_dependencies
+    check_vm_max_map_count
     fetch_cwlmetrics_repo
     fetch_dmc_repo
     generate_config

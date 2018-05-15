@@ -60,9 +60,32 @@ $ cd /home/inutano/workflows/kallisto
 $ ls
 kallisto.cwl kallisto.yml
 $ mkdir result
-$ cwltool --debug --leave-container --timestamps --compute-checksum --record-container-id --cidfile-dir $(pwd)/result --outdir $(pwd)/result kallisto.cwl kallisto.yml 2> $(pwd)/result/cwltool.log 
+$ cwltool --debug --leave-container --timestamps --compute-checksum --record-container-id --cidfile-dir $(pwd)/result --outdir $(pwd)/result kallisto.cwl kallisto.yml 2> $(pwd)/result/cwltool.log
 ```
 
 ## Usage: summarize workflow metrics
 
 ## How it works
+
+## Troubleshooting
+
+### CWL-metrics starting process stopped with showing "Creating Elasticsearch index..."
+
+This happens because Elasticsearch did not launch successfully because of the machine setting on `vm.max_map_count`. Follow the guide below to set it to 262144.
+
+```
+# Linux
+$ sudo sysctl -w vm.max_map_count=262144
+$ grep vm.max_map_count /etc/sysctl.conf
+vm.max_map_count=262144
+
+# On mac os
+$ screen ~/Library/Containers/com.docker.docker/Data/com.docker.driver.amd64-linux/tty
+$ sudo sysctl -w vm.max_map_count=262144
+
+# Windows and macOS with Docker Toolbox
+$ docker-machine ssh
+$ sudo sysctl -w vm.max_map_count=262144
+```
+
+If you already set and still have a problem on launching CWL-metrics, please let us know by creating an [issue](https://github.com/inutano/cwl-metrics/issues).
