@@ -96,6 +96,7 @@ EOS
 pull_containers(){
   echo "Pulling containers..."
   docker pull "yyabuki/docker-cwllog-generator:latest"
+  docker pull "quay.io/inutano/cwl-metrics-cleint:latest"
 }
 
 init_cwl_metrics() {
@@ -160,9 +161,14 @@ stop_cwl_metrics() {
   echo "CWL-metrics is stopped."
 }
 
-## List all metrics data of workflows and tools stored in ES
-list_data() {
-  echo "Fetching data..."
+## fetch data from Elasticsearch, format must be json or tsv
+fetch_data() {
+  local format="${1}"
+  docker run -it --rm \
+    -e ES_HOST=${ES_HOST} \
+    -e ES_PORT=${ES_PORT} \
+    quay.io/inutano/cwl-metrics-cleint:latest \
+    "${format}"
 }
 
 #
@@ -188,8 +194,9 @@ else
         stop_cwl_metrics
         start_cwl_metrics
         ;;
-      list)
-        list_data
+      fetch)
+        fetch_data "${2}"
+        shift
         ;;
       -v|--version)
         version
