@@ -176,7 +176,7 @@ fetch_data() {
     local option="${option} -e ES_PORT=${ES_PORT}"
   fi
 
-  docker ${option} quay.io/inutano/cwl-metrics-client:latest "${format}"
+  docker run ${option} quay.io/inutano/cwl-metrics-client:latest "${format}"
 }
 
 #
