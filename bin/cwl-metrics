@@ -164,11 +164,19 @@ stop_cwl_metrics() {
 ## fetch data from Elasticsearch, format must be json or tsv
 fetch_data() {
   local format="${1}"
-  docker run -it --rm \
-    -e ES_HOST=${ES_HOST} \
-    -e ES_PORT=${ES_PORT} \
-    quay.io/inutano/cwl-metrics-client:latest \
-    "${format}"
+  local option="-it --rm"
+
+  if [[ ! -z "${ES_HOST}" ]]; then
+    local option="${option} -e ES_HOST=${ES_HOST}"
+  else
+    local option="${option} --net='host'"
+  fi
+
+  if [[ ! -z "${ES_PORT}" ]]; then
+    local option="${option} -e ES_PORT=${ES_PORT}"
+  fi
+
+  docker ${option} quay.io/inutano/cwl-metrics-client:latest "${format}"
 }
 
 #
