@@ -96,7 +96,7 @@ EOS
 pull_containers(){
   echo "Pulling containers..."
   docker pull "yyabuki/docker-cwllog-generator:latest"
-  docker pull "quay.io/inutano/cwl-metrics-cleint:latest"
+  docker pull "quay.io/inutano/cwl-metrics-client:latest"
 }
 
 init_cwl_metrics() {
@@ -167,7 +167,7 @@ fetch_data() {
   docker run -it --rm \
     -e ES_HOST=${ES_HOST} \
     -e ES_PORT=${ES_PORT} \
-    quay.io/inutano/cwl-metrics-cleint:latest \
+    quay.io/inutano/cwl-metrics-client:latest \
     "${format}"
 }
 
