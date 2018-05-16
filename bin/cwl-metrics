@@ -169,7 +169,7 @@ fetch_data() {
   if [[ ! -z "${ES_HOST}" ]]; then
     local option="${option} -e ES_HOST=${ES_HOST}"
   else
-    local option="${option} --net='host'"
+    local option="${option} --network=host"
   fi
 
   if [[ ! -z "${ES_PORT}" ]]; then
