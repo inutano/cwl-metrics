@@ -170,4 +170,8 @@ container_id    stepname        instance_type   cpu_total_percent       memory_m
 7fc27d4d335a    kallisto_quant   m5.2xlarge             6811197440      2909052928      2956857344      20      1acbecae-5990-11e8-9693-0aafe96a2914    KallistoWorkflow-se.cwl yyabuki/kallisto:0.43.1 0.43.1  success 2951599476
 ```
 
-And you can use any software you like to visualize the result.
+And you can use any software you like to visualize the result! Below is an example that compared execution time and amount of used memory of the Kallisto workflow executions for 5 samples of different file sizes on 4 different instances. 
+
+![elapsed time](images/time.png)
+
+![memory total usage](images/mem.png)
