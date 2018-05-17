@@ -82,6 +82,9 @@ fetch_dmc_repo(){
   echo "Installing docker metrics collector at ${dmc_repo}..."
   mkdir -p "${CWL_METRICS_DIR}/repos"
   git clone "${url}" "${dmc_repo}"
+  cd "${dmc_repo}"
+  git checkout -b production
+  sed -r 's:#(volumes.*PERSIST_DATA):\1:' "docker-compose.yml"
 }
 
 generate_config(){
