@@ -24,14 +24,6 @@ This will do followings:
 - Generate config files
 - Run CWL-metrics
 
-Installing CWL-spec will pull the following containers to your host environment:
-
-- `telegraf` for collecting container metrics
-- `sebp/elk` for Elasticsearch and Kibana
-- `quay.io/inutano/run-dmc` for setting up docker-metrics-collector
-- `quay.io/inutano/fluentd` for sending log data to Elasticsearch
-- `yyabuki/docker-cwllog-generator` for processing workflow metadata
-- `quay.io/inutano/cwl-metrics-client` for summarizing metrics data
 
 ## Troubleshooting
 
