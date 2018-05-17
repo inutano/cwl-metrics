@@ -1,6 +1,10 @@
 # CWL-metrics
 
+![images/run-cwl.png]
+
 CWL-metrics is a framework to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
+
+---
 
 ## Prerequisites
 
@@ -10,6 +14,8 @@ CWL-metrics is a framework to collect and analyze computational resource usage o
 - `docker`
 - `docker-compose` (version 3)
 - `cwltool`
+
+---
 
 ## Install
 
@@ -39,6 +45,8 @@ Installing CWL-spec will pull the following containers to your host environment:
 - `quay.io/inutano/fluentd` for sending log data to Elasticsearch
 - `yyabuki/docker-cwllog-generator` for processing workflow metadata
 - `quay.io/inutano/cwl-metrics-client` for summarizing metrics data
+
+---
 
 ## Usage
 
@@ -78,9 +86,7 @@ $ mkdir result
 $ cwltool --debug --leave-container --timestamps --compute-checksum --record-container-id --cidfile-dir $(pwd)/result --outdir $(pwd)/result kallisto.cwl kallisto.yml 2> $(pwd)/result/cwltool.log
 ```
 
-## Usage: summarize workflow metrics
-
-### Using Elasticsearch/Kibana
+### Visualize data on Elasticsearch/Kibana
 
 Collected metrics data are stored in Elasticsearch which exposes the port 9022. To check the status of the Elasticsearch server, run the following command:
 
@@ -119,7 +125,7 @@ In this screen you'll have to create index pattern, but we'll only have two indi
 
 In this screen you can see all the data stored in the Elasticsearch server, and Kibana has some useful visualization tools which can aggregate data and draw plots, but the data are too raw. For more simple statistics like total memory usage by workflow runs, use the command explained in the next section.
 
-### cwl-metrics fetch
+### Summarize data by `cwl-metrics fetch`
 
 `cwl-metrics` command has a feature to fetch data from the Elasticsearch server and aggregate metrics with the workflow metadata. It can output the data in JSON or TSV.
 
@@ -139,6 +145,8 @@ fa0831923476    kallisto_version         m5.2xlarge                             
 ```
 
 And you can use any software you like to visualize the result.
+
+---
 
 ## Troubleshooting
 
