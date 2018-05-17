@@ -23,15 +23,30 @@ This will do followings:
 
 - Check prerequisites
 - Create `$HOME/.cwlmetrics`
-- Fetch scripts and required docker containers
+- Fetch required tools
+  - CWL-metrics daemon script (this repository)
+  - [docker-metrics-collector](https://github.com/inutano/docker-metrics-collector) repository
+  - [docker-cwllog-generator](https://github.com/inutano/docker-cwllog-generator) docker container
+  - [cwl-metrics-client](https://github.com/inutano/cwl-metrics-client) docker container
 - Generate config files
 - Run CWL-metrics
+
+Installing CWL-spec will pull the following containers to your host environment:
+
+- `telegraf` for collecting container metrics
+- `sebp/elk` for Elasticsearch and Kibana
+- `quay.io/inutano/run-dmc` for setting up docker-metrics-collector
+- `quay.io/inutano/fluentd` for sending log data to Elasticsearch
+- `yyabuki/docker-cwllog-generator` for processing workflow metadata
+- `quay.io/inutano/cwl-metrics-client` for summarizing metrics data
 
 ## Usage
 
 ### Launch CWL-metrics system
 
-CWL-metrics will start automatically after the installation. The script to control the system `cwl-metrics` is at `$HOME/.cwlmetrics/bin/cwl-metrics`. Do any of followings to control the system:
+CWL-metrics will start automatically after the installation. The script to control the system `cwl-metrics` is at `$HOME/.cwlmetrics/bin/cwl-metrics`. `export PATH=$HOME/.cwlmetrics/bin:$PATH` would be useful to execute the command wherever you need.
+
+Do any of followings to control the system:
 
 - `cwl-metrics status`: shows if the system is running
 - `cwl-metrics start`: launches metrics collection system
