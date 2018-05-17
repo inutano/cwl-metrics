@@ -1,10 +1,6 @@
-# CWL-metrics
-
 ![RUN CWL](images/run-cwl.png)
 
 CWL-metrics is a framework to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
-
----
 
 ## Prerequisites
 
@@ -14,8 +10,6 @@ CWL-metrics is a framework to collect and analyze computational resource usage o
 - `docker`
 - `docker-compose` (version 3)
 - `cwltool`
-
----
 
 ## Install
 
@@ -45,8 +39,6 @@ Installing CWL-spec will pull the following containers to your host environment:
 - `quay.io/inutano/fluentd` for sending log data to Elasticsearch
 - `yyabuki/docker-cwllog-generator` for processing workflow metadata
 - `quay.io/inutano/cwl-metrics-client` for summarizing metrics data
-
----
 
 ## Usage
 
@@ -145,28 +137,3 @@ fa0831923476    kallisto_version         m5.2xlarge                             
 ```
 
 And you can use any software you like to visualize the result.
-
----
-
-## Troubleshooting
-
-### CWL-metrics starting process stopped with showing "Creating Elasticsearch index..."
-
-This happens because Elasticsearch did not launch successfully because of the machine setting on `vm.max_map_count`. Follow the guide below to set it to 262144.
-
-```
-# Linux
-$ sudo sysctl -w vm.max_map_count=262144
-$ grep vm.max_map_count /etc/sysctl.conf
-vm.max_map_count=262144
-
-# On mac os
-$ screen ~/Library/Containers/com.docker.docker/Data/com.docker.driver.amd64-linux/tty
-$ sudo sysctl -w vm.max_map_count=262144
-
-# Windows and macOS with Docker Toolbox
-$ docker-machine ssh
-$ sudo sysctl -w vm.max_map_count=262144
-```
-
-If you already set and still have a problem on launching CWL-metrics, please let us know by creating an [issue](https://github.com/inutano/cwl-metrics/issues).
