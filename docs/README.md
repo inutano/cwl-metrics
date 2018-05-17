@@ -1,10 +1,10 @@
 ![RUN CWL](images/run-cwl2.png)
 
-Container virtualization technology to improve portability of software tools is getting popular everywhere: also in the field of Bioinformatics/Computational biology, where a number of data analysis tools for many study purposes are implemented and distributed as open source software, the containers are helping people to maintain their data analysis environment. The new community standard [Common Workflow Language (CWL)](https://www.commonwl.org) is also contributing to make it easy to share workflows, a set of tools packaged in containers.
+Container virtualization technology to improve portability of software tools is getting popular everywhere: also in the field of Bioinformatics/Computational biology, where many data analysis tools for many study purposes are implemented and distributed as open source software, the containers are helping people to maintain their data analysis environment. The new community standard [Common Workflow Language (CWL)](https://www.commonwl.org) is also contributing to making it easy to share workflows, a set of tools packaged in containers.
 
 In the era of big genomic data, researchers need more machines as much more data is coming. This situation pushes to make tools and workflows portable to use cloud computing services which offer on-demand flexible computational environments. However, to optimize the use of cloud environments users have to know which cloud instance is the best for their purposes - based on the resource usage metrics of tools and workflows.
 
-[CWL-metrics](https://github.com/inutano/cwl-metrics) is a framework to collect and analyze computational resource usage of workflow runs based on the CWL. CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
+[CWL-metrics](https://github.com/inutano/cwl-metrics) is a framework to collect and analyze computational resource usage of workflow runs based on the CWL. CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data.
 
 ## Prerequisites
 
