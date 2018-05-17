@@ -84,7 +84,7 @@ fetch_dmc_repo(){
   git clone "${url}" "${dmc_repo}"
   cd "${dmc_repo}"
   git checkout -b production
-  sed -r 's:#(volumes.*PERSIST_DATA):\1:' "docker-compose.yml"
+  sed -r 's:#(.*PERSIST_DATA):\1:' -i.buk "docker-compose.yml"
 }
 
 generate_config(){
