@@ -1,6 +1,10 @@
 ![RUN CWL](images/run-cwl2.png)
 
-[CWL-metrics](https://github.com/inutano/cwl-metrics) is a framework to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
+Container virtualization to improve portability of the software tools are being used everywhere: in the field of Bioinformatics/Computational biology, where a number of data analysis tools for many study purposes are implemented and distributed as open source, the containers are helping users to keep their data analysis environment. The newly raising community standard [Common Workflow Language (CWL)](https://www.commonwl.org) is also contributing to make it easy to run a set of tools, workflow, anywhere.
+
+In the era of the big genomic data, researchers need more machines as much more data is coming. Making tools and workflows portable also encourages a use of cloud computing services which users can use on-demand flexible computational environments. However, to optimize the use of cloud environments users have to know which cloud instance is the best for their purposes - based on the resource usage metrics of tools and workflows.
+
+[CWL-metrics](https://github.com/inutano/cwl-metrics) is a framework to collect and analyze computational resource usage of workflow runs based on the CWL. CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
 
 ## Prerequisites
 
@@ -44,17 +48,17 @@ Installing CWL-spec will pull the following containers to your host environment:
 
 ### Launch CWL-metrics system
 
-CWL-metrics will start automatically after the installation. The script to control the system `cwl-metrics` is at `$HOME/.cwlmetrics/bin/cwl-metrics`. `export PATH=$HOME/.cwlmetrics/bin:$PATH` would be useful to execute the command wherever you need.
+CWL-metrics will start automatically after the installation. The `cwl-metrics` command is at `$HOME/.cwlmetrics/bin/cwl-metrics`. `export PATH=$HOME/.cwlmetrics/bin:$PATH` would be useful to execute the command wherever you need.
 
-Do any of followings to control the system:
+Do any of followings to control CWL-metrics:
 
 - `cwl-metrics status`: shows if the system is running
-- `cwl-metrics start`: launches metrics collection system
-- `cwl-metrics stop`: stops metrics collection system
+- `cwl-metrics start`: launches the metrics collection system
+- `cwl-metrics stop`: stops the metrics collection system
 
 ### Collect workflow resource usage
 
-Current version of CWL-metrics supports only `cwltool` for CWL execution engine. While the system is running, run `cwltool` with options below to collect workflow metadata:
+CWL-metrics is using [cwllog-generator](https://github.com/inutano/docker-cwllog-generator) for extracting workflow metadata. The current version of cwllog-generator supports only `cwltool` for CWL execution engine, and require some options on running. While the system is running, run `cwltool` with options below to collect workflow metadata:
 
 - `--debug`
 - `--leave-container`
@@ -111,19 +115,51 @@ Click "Set up index patterns".
 
 ![Create index pattern](images/kibana02.png)
 
-In this screen you'll have to create index pattern, but we'll only have two indices named "telegraf" and "workflow", which contain the metrics data and workflow metadata, respectively. Type "telegraf" to filter indices, and click "next step". In the next step you have to configure time filter field name, just click the drop down, and select timestamp, then Create index pattern. Once the index pattern successfully created, click "Discover" in the left side menu. You will see the timeline of collected data and the list of records like the screenshot below.
+In this screen you have to create an index pattern while we have only two indices named "telegraf" and "workflow", which contain the metrics data and workflow metadata, respectively. Type "telegraf" to filter the indices, and click "next step". In the next step you have to configure time filter field name. Click the drop down, and select "timestamp", then click "Create index pattern". Once the index pattern successfully created, visit "Discover" in the left side menu. You will see the timeline of collected data and the list of records like the screenshot below.
 
 ![Discover data](images/kibana03.png)
 
-In this screen you can see all the data stored in the Elasticsearch server, and Kibana has some useful visualization tools which can aggregate data and draw plots, but the data are too raw. For more simple statistics like total memory usage by workflow runs, use the command explained in the next section.
+In this screen you can see all the data stored in the Elasticsearch server, and Kibana has some useful visualization tools which can aggregate data and draw plots, but the raw telegraf metrics data are pieces of metrics for each 5 seconds of workflow runs, which has to be concatenated. To get simple statistics like total memory usage by workflow runs, use the `cwl-metrics fetch` command explained in the next section.
 
 ### Summarize data by `cwl-metrics fetch`
 
-`cwl-metrics` command has a feature to fetch data from the Elasticsearch server and aggregate metrics with the workflow metadata. It can output the data in JSON or TSV.
+`cwl-metrics fetch` is a command to execute [cwl-metrics-client](http://github.com/inutano/cwl-metrics-client) to fetch metrics data from the Elasticsearch server and aggregate metrics with the workflow metadata. The output format is JSON or TSV.
+
+To get metrics summary in JSON (result is simplified):
 
 ```
-$ cwl-metrics fetch json
-{"CWL-metrics":[{"workflow_id":"48813280-5990-11e8-9693-0aafe96a2914","workflow_name":"KallistoWorkflow-se.cwl","platform":{"instance_type":" m5.2xlarge","region":" us-east-1a","hostname":" ip-172-31-10-231.ec2.internal"},"steps":{"135df0da59c968f22d1e394c9412cb9c3fa4580cf62616790ff79ffa162c7911":{"stepname":"kallisto_quant","container_name":"yyabuki/kallisto:0.43.1","tool_version":"0.43.1","tool_status":"success","input_files":{"SRR1274306.fastq":229279368,"GRCh38Gencode":2836547930},"metrics":{"cpu_total_percent":99.7522093765586,"memory_max_usage":4053995520,"memory_cache":152821760,"blkio_total_bytes":51630080,"elapsed_time":40}},"e4796affa915d74f05d2094c410fcfcd0771e51fba9e7712be26a5b124393a94":{"stepname":"kallisto_stdout","container_name":"yyabuki/kallisto:0.43.1","tool_version":"0.43.1","tool_status":"success","input_files":{},"metrics":{"cpu_total_percent":0,"memory_max_usage":0,"memory_cache":null,"blkio_total_bytes":null,"elapsed_time":0}},"1caaaf7b5be68affbec2f4df1a95fcc534431c93fb8b56164affa59c7ae47871":{"stepname":"kallisto_version","container_name":"yyabuki/docker-ngs-version:0.1.0","tool_version":"0.43.1","tool_status":"success","input_files":{"kallisto_stdout":1337},"metrics":{"cpu_total_percent":null,"memory_max_usage":null,"memory_cache":null,"blkio_total_bytes":null,"elapsed_time":null}}}}]}
+$ cwl-metrics fetch json | jq .
+{
+	"CWL-metrics":[
+	{
+	  	"workflow_id":"48813280-5990-11e8-9693-0aafe96a2914",
+	  	"workflow_name":"KallistoWorkflow-se.cwl",
+	  	"platform":{
+	  		"instance_type":"m5.2xlarge",
+	  		"region":"us-east-1a",
+	  		"hostname":"ip-172-31-10-231.ec2.internal"
+	  	},
+	  	"steps":{
+	  		"135df0da59c968f22d1e394c9412cb9c3fa4580cf62616790ff79ffa162c7911":{
+	  			"stepname":"kallisto_quant",
+	  			"container_name":"yyabuki/kallisto:0.43.1",
+	  			"tool_version":"0.43.1",
+	  			"tool_status":"success",
+	  			"input_files":{
+	  				"SRR1274306.fastq":229279368,
+	  				"GRCh38Gencode":2836547930
+	  			},
+	  			"metrics":{
+	  				"cpu_total_percent":99.7522093765586,
+	  				"memory_max_usage":4053995520,
+	  				"memory_cache":152821760,
+	  				"blkio_total_bytes":51630080,
+	  				"elapsed_time":40
+	  			}
+	  		}
+		}
+	}]
+}
 ```
 
 in TSV:
@@ -132,8 +168,6 @@ in TSV:
 $ cwl-metrics fetch tsv
 container_id    stepname        instance_type   cpu_total_percent       memory_max_usage        memory_cache    blkio_total_bytes       elapsed_time    workflow_id     workflow_name   container_name  tool_version    tool_status     total_inputfile_size
 7fc27d4d335a    kallisto_quant   m5.2xlarge             6811197440      2909052928      2956857344      20      1acbecae-5990-11e8-9693-0aafe96a2914    KallistoWorkflow-se.cwl yyabuki/kallisto:0.43.1 0.43.1  success 2951599476
-1c979a72b9f7    kallisto_stdout  m5.2xlarge                                             1acbecae-5990-11e8-9693-0aafe96a2914    KallistoWorkflow-se.cwl yyabuki/kallisto:0.43.1 0.43.1  success
-fa0831923476    kallisto_version         m5.2xlarge                                             1acbecae-5990-11e8-9693-0aafe96a2914    KallistoWorkflow-se.cwl yyabuki/docker-ngs-version:0.1.0        0.43.1  success 1337
 ```
 
 And you can use any software you like to visualize the result.

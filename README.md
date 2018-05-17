@@ -4,6 +4,15 @@ CWL-metrics is a framework to collect and analyze computational resource usage o
 
 Visit [github pages](https://inutano.github.io/cwl-metrics/) for more details.
 
+## Prerequisites
+
+- `git`
+- `curl`
+- `perl`
+- `docker`
+- `docker-compose` (version 3)
+- `cwltool`
+
 ## Install
 
 Use `curl` to fetch the install script from GitHub and exec via bash command as:
