@@ -60,7 +60,7 @@ check_dependencies() {
 check_vm_max_map_count() {
   case "$(uname -s)" in
     Linux*)
-      if [[ $(sysctl vm.max_map_count) -lt 262144 ]]; then
+      if [[ $(sysctl vm.max_map_count | awk '{ print $NF }') -lt 262144 ]]; then
         echo "vm.max_map_count is not enough for launching Elasticsearch"
         echo "Set it to 262144 by the following command"
         echo "  sysctl -w vm.max_map_count=262144"
