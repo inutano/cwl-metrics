@@ -8,7 +8,7 @@ CWL-metrics is a framework to collect and analyze computational resource usage o
 - `curl`
 - `perl`
 - `docker`
-- `docker-compose`
+- `docker-compose` (version 3)
 - `cwltool`
 
 ## Install
