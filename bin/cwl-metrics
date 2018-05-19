@@ -9,7 +9,7 @@ set -e
 #
 # Variables
 #
-VERSION="20180514"
+VERSION="20180519"
 CWL_METRICS_DIR="${HOME}/.cwlmetrics"
 
 #
