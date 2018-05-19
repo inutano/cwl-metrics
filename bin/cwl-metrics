@@ -28,10 +28,10 @@ help() {
 cwl-metrics version ${VERSION}
 Usage: cwl-metrics [command] [options...]
 Commands:
-  start    Run CWL-metrics daemon and containers
-  stop     Stop daemon and containers
-  status   Show CWL-metrics system status
-  list     List metrics data stored in Elasticsearch
+  start             Run CWL-metrics daemon and containers
+  stop              Stop daemon and containers
+  status            Show CWL-metrics system status
+  fetch <json|tsv>  Fetch metrics data stored in Elasticsearch
 
 HELP
 }
