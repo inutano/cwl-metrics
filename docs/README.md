@@ -48,7 +48,7 @@ Installing CWL-spec will pull the following containers to your host environment:
 
 ### Launch CWL-metrics system
 
-CWL-metrics will start automatically after the installation. The `cwl-metrics` command is at `$HOME/.cwlmetrics/bin/cwl-metrics`. `export PATH=$HOME/.cwlmetrics/bin:$PATH` would be useful to execute the command wherever you need.
+CWL-metrics will start automatically after the installation. The `cwl-metrics` command is at `$HOME/.cwlmetrics/bin/cwl-metrics`. `chmod +x $HOME/.cwlmetrics/bin/cwl-metrics` and `export PATH=$HOME/.cwlmetrics/bin:$PATH` would be useful to execute the command wherever you need.
 
 Do any of followings to control CWL-metrics:
 
