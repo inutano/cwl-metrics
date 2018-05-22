@@ -145,6 +145,7 @@ sub run {
     my %stderrLogPath = ();
     my %pidResDirPath = ();
     my %workflowName = ();
+    my %cidDirPath = ();
 
     # read .cwlmetrics/config file.
     setting();
@@ -163,17 +164,18 @@ sub run {
     }
     chdir("-");
     while (1) {
-        get_cwltool_exec_process(\%pids, \%resDirPath, \%yamlPath, \%stderrLogPath, \%pidResDirPath, \%workflowName);
+        get_cwltool_exec_process(\%pids, \%resDirPath, \%yamlPath, \%stderrLogPath, \%pidResDirPath, \%workflowName, \%cidDirPath);
         foreach my $pid (keys %pids) {
             my $noPid = exist_pid($pid);
             if ($noPid == 1) {
                 my $resDir = $resDirPath{$pid};
+                my $cidDir = $cidDirPath{$pid};
                 ### docker info.
                 my $dockerInfo = "$resDir/docker_info";
                 system("docker info > $dockerInfo");
                 ### get cwl-related container ids.
                 undef @cids;
-                get_cid_lists_from_cidfiles($resDir, \@cids);
+                get_cid_lists_from_cidfiles($cidDir, \@cids);
                 ### docker ps.
                 my $cidLine = "";
                 foreach my $cid (@cids) {
@@ -190,12 +192,13 @@ sub run {
                     system("docker rm $cid");
                 }
                 ### docker-cwllog-generator
-                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid});
+                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid}, $cidDir);
                 ### insert workflow metrics into ES.
                 my $cwlLog = $resDir."/cwl_log.json";
                 send_logs_to_es($cwlLog);
                 delete $pids{$pid};
                 delete $resDirPath{$pid};
+                delete $cidDirPath{$pid};
                 delete $yamlPath{$pid};
                 delete $stderrLogPath{$pid};
                 unlink($pidResDirPath{$pid});
@@ -218,6 +221,8 @@ sub get_cwltool_exec_process {
     my $pidResDirPathRef = $_[4]; # hash reference.
     my $workflowNameRef = $_[5]; # hash reference.
 
+    my $cidDirPathRef = $_[6]; # hash reference.
+
     ### check cwltool commands.
     my $ps = `ps aux | grep cwltool`;
     chomp($ps);
@@ -232,6 +237,7 @@ sub get_cwltool_exec_process {
                 ${$pidsRef}{$pid} = "start";
                 my $command = "";
                 my $resDir = "";
+                my $cidDir = "";
                 foreach my $data (@dataInfo) {
                     if ($data =~ /\.cwl/) {
                         my $workflow = basename($data);
@@ -248,12 +254,20 @@ sub get_cwltool_exec_process {
                         $dirHit = 1;
                         next;
                     }
+                    if ($data eq "--cidfile-dir") {
+                        $cidDirHit = 1;
+                        next;
+                    }
                     if ($dirHit == 1) { # $data : directory path.
                         ${$resDirPathRef}{$pid} = $data;
                         $resDir = $data;
                     }
+                    if ($cidDirHit == 1) {
+                        ${$cidDirPathRef}{$pid} = $data;
+                        $cidDir = $data;
+                    }
                 }
-                my $contents = $pid."	".$resDir."	".$command;
+                my $contents = $pid."	".$resDir."	".$command." ".$cidDir;
                 my $pidResDirFile = "/tmp/cwl_";
                 $pidResDirFile .= $pid;
                 system("echo '$contents' > $pidResDirFile");
@@ -401,16 +415,20 @@ sub exec_cwl_json_log_generator {
     my $cwlName = basename($cwlLog);
     my $cwlDir = dirname($cwlLog);
 
+    # Path to cidfile directory
+    my $cidDir = $_[5];
+
     # Build docker run command
     (my $docker_run_cmd = qq{
       docker run --rm
       -v $resDir:/result
+      -v $cidDir:/ciddir
       -v $dockerPsDir:/docker_ps
       -v $dockerInfoDir:/docker_info
       -v $yamlJsonDir:/job_conf
       -v $cwlDir:/debug_output
       quay.io/inutano/cwl-log-generator:$generatorVersion
-      --cidfile-dir /result
+      --cidfile-dir /ciddir
       --docker-ps /docker_ps/$dockerPsName
       --docker-info /docker_info/$dockerInfoName
       --job-conf /job_conf/$yamlJsonName
