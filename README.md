@@ -28,7 +28,7 @@ This will do followings:
 - Fetch required tools
   - CWL-metrics daemon script (this repository)
   - [docker-metrics-collector](https://github.com/inutano/docker-metrics-collector) repository
-  - [docker-cwllog-generator](https://github.com/inutano/docker-cwllog-generator) docker container
+  - [cwl-log-generator](https://github.com/inutano/cwl-log-generator) docker container
   - [cwl-metrics-client](https://github.com/inutano/cwl-metrics-client) docker container
 - Generate config files
 - Run CWL-metrics

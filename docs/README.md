@@ -30,7 +30,7 @@ This will do followings:
 - Fetch required tools
   - CWL-metrics daemon script (this repository)
   - [docker-metrics-collector](https://github.com/inutano/docker-metrics-collector) repository
-  - [docker-cwllog-generator](https://github.com/inutano/docker-cwllog-generator) docker container
+  - [cwl-log-generator](https://github.com/inutano/cwl-log-generator) docker container
   - [cwl-metrics-client](https://github.com/inutano/cwl-metrics-client) docker container
 - Generate config files
 - Run CWL-metrics
@@ -58,7 +58,7 @@ Do any of followings to control CWL-metrics:
 
 ### Collect workflow resource usage
 
-CWL-metrics is using [cwllog-generator](https://github.com/inutano/docker-cwllog-generator) for extracting workflow metadata. The current version of cwllog-generator supports only `cwltool` for CWL execution engine, and require some options on running. While the system is running, run `cwltool` with options below to collect workflow metadata:
+CWL-metrics is using [cwllog-generator](https://github.com/inutano/cwl-log-generator) for extracting workflow metadata. The current version of cwllog-generator supports only `cwltool` for CWL execution engine, and require some options on running. While the system is running, run `cwltool` with options below to collect workflow metadata:
 
 - `--debug`
 - `--leave-container`
