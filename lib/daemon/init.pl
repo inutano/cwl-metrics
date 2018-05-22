@@ -408,7 +408,7 @@ sub exec_cwl_json_log_generator {
       -v $dockerInfoDir:/docker_info
       -v $yamlJsonDir:/job_conf
       -v $cwlDir:/debug_output
-      quay.io/inutano/cwl-log-generator:0.1.4
+      quay.io/inutano/cwl-log-generator:0.1.6
       --cidfile-dir /result
       --docker-ps /docker_ps/$dockerPsName
       --docker-info /docker_info/$dockerInfoDir
