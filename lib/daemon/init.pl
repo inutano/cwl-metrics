@@ -297,7 +297,7 @@ sub get_cid_lists_from_cidfiles {
         }
         my $cid = `cat $resDir/$resFile`;
         push @$cidsRef, $cid;
-        unlink("$resDir/$resFile");
+        # unlink("$resDir/$resFile"); # Do not delete cid files here
     }
     closedir(RESDIR);
 
