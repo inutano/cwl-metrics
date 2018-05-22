@@ -232,7 +232,10 @@ sub get_cwltool_exec_process {
         if ($line =~ /\.cwl/ && $line =~ /python/) {
             my @dataInfo = split(" ", $line);
             $pid = $dataInfo[1];
+
             my $dirHit = 0;
+            my $cidDirHit = 0;
+
             if (!exists(${$pidsRef}{$pid})) {
                 ${$pidsRef}{$pid} = "start";
                 my $command = "";
