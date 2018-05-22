@@ -323,8 +323,7 @@ sub get_cid_lists_from_cidfiles {
         push @$cidsRef, $cid;
         # unlink("$resDir/$resFile"); # Do not delete cid files here
     }
-    closedir(RESDIR);
-
+    closedir(CIDDIR);
 }
 
 
