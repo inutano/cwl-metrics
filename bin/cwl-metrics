@@ -13,7 +13,7 @@ VERSION="20180522"
 CWL_METRICS_DIR="${HOME}/.cwlmetrics"
 
 CWL_LOG_GENERATOR_VERSION="0.1.6"
-CWL_METRICS_CLEINT_VERSION="0.1.2"
+CWL_METRICS_CLIENT_VERSION="0.1.3"
 
 #
 # Load functions
@@ -102,7 +102,7 @@ EOS
 pull_containers(){
   echo "Pulling containers..."
   docker pull "quay.io/inutano/cwl-log-generator:${CWL_LOG_GENERATOR_VERSION}"
-  docker pull "quay.io/inutano/cwl-metrics-client:${CWL_METRICS_CLEINT_VERSION}"
+  docker pull "quay.io/inutano/cwl-metrics-client:${CWL_METRICS_CLIENT_VERSION}"
 }
 
 init_cwl_metrics() {
@@ -183,7 +183,7 @@ fetch_data() {
   fi
 
   docker run --rm ${option} \
-    quay.io/inutano/cwl-metrics-client:${CWL_METRICS_CLEINT_VERSION} \
+    quay.io/inutano/cwl-metrics-client:${CWL_METRICS_CLIENT_VERSION} \
     ${format}
 }
 
