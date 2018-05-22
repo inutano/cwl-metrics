@@ -11,6 +11,7 @@ my $pidFile = "/tmp/cwllog_pid";
 my $dmcDir = "";
 my $esHost = "";
 my $esPort = "";
+my $generatorVersion = "0.1.7"
 
 main();
 
@@ -408,7 +409,7 @@ sub exec_cwl_json_log_generator {
       -v $dockerInfoDir:/docker_info
       -v $yamlJsonDir:/job_conf
       -v $cwlDir:/debug_output
-      quay.io/inutano/cwl-log-generator:0.1.6
+      quay.io/inutano/cwl-log-generator:$generatorVersion
       --cidfile-dir /result
       --docker-ps /docker_ps/$dockerPsName
       --docker-info /docker_info/$dockerInfoName
