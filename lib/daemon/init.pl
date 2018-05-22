@@ -270,10 +270,12 @@ sub get_cwltool_exec_process {
                     if ($dirHit == 1) { # $data : directory path.
                         ${$resDirPathRef}{$pid} = $data;
                         $resDir = $data;
+                        $dirHit = 2;
                     }
                     if ($cidDirHit == 1) {
                         ${$cidDirPathRef}{$pid} = $data;
                         $cidDir = $data;
+                        $cidDirHit = 2;
                     }
                 }
                 my $contents = $pid."	".$resDir."	".$command;
