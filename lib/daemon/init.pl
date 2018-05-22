@@ -377,27 +377,46 @@ sub get_stderr_file_path {
 
 
 sub exec_cwl_json_log_generator {
-
+    # Path to directory specified on cwltool --output
     my $resDir = $_[0];
-    my $dockerPs = $_[1];
-    my $dockerInfo = $_[2];
-    my $yamlJsonPath = $_[3];
-    my $cwlLog = $_[4];
 
+    # Path to docker ps file
+    my $dockerPs = $_[1];
     my $dockerPsName = basename($dockerPs);
     my $dockerPsDir = dirname($dockerPs);
 
+    # Path to docker info file
+    my $dockerInfo = $_[2];
     my $dockerInfoName = basename($dockerInfo);
     my $dockerInfoDir = dirname($dockerInfo);
 
+    # Path to job-conf file
+    my $yamlJsonPath = $_[3];
     my $yamlJsonName = basename($yamlJsonPath);
     my $yamlJsonDir = dirname($yamlJsonPath);
 
+    # Path to debug output file
+    my $cwlLog = $_[4];
     my $cwlName = basename($cwlLog);
     my $cwlDir = dirname($cwlLog);
 
-    system("docker run --rm -v $cwlDir:/cwl/log -v $yamlJsonDir:/cwl/src -v $resDir:/cwl/result -v $dockerPsDir:/cwl/result -v $dockerInfoDir:/cwl/result yyabuki/docker-cwllog-generator cwl_log_generator.py --docker_ps /cwl/result/$dockerPsName --docker_info /cwl/result/$dockerInfoName --cwl_log /cwl/log/$cwlName --cwl_input /cwl/src/$yamlJsonName");
-
+    # Build docker run command
+    (my $docker_run_cmd = qq{
+      docker run --rm
+      -v $resDir:/result
+      -v $dockerPsDir:/docker_ps
+      -v $dockerInfoDir:/docker_info
+      -v $yamlJsonDir:/job_conf
+      -v $cwlDir:/debug_output
+      quay.io/inutano/cwl-log-generator:0.1.4
+      --cidfile-dir /result
+      --docker-ps /docker_ps/$dockerPsName
+      --docker-info /docker_info/$dockerInfoDir
+      --job-conf /job_conf/$yamlJsonName
+      --debug-output /debug_output/$cwlName
+      --output-dir /result
+    }) =~ s/\r?\n {6}/ /mg;
+    system($docker_run_cmd);
 }
 
 
