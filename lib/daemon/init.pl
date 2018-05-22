@@ -140,15 +140,18 @@ sub restart {
 sub run {
 
     my %pids = ();
+
     my %resDirPath = ();
+    my %cidDirPath = ();
+
     my %yamlPath = ();
     my %stderrLogPath = ();
     my %pidResDirPath = ();
     my %workflowName = ();
-    my %cidDirPath = ();
 
     # read .cwlmetrics/config file.
     setting();
+
     # start docker-compose for docker-metrics-collector.
     if ($dmcDir eq "") {
         die "ERROR: the docker-metrics-collector directory path not found in ~/.cwlmetrics/config\n";
@@ -162,6 +165,7 @@ sub run {
         chdir("$dmcDir");
         system("docker-compose up &");
     }
+
     chdir("-");
     while (1) {
         get_cwltool_exec_process(\%pids, \%resDirPath, \%yamlPath, \%stderrLogPath, \%pidResDirPath, \%workflowName, \%cidDirPath);
@@ -239,8 +243,10 @@ sub get_cwltool_exec_process {
             if (!exists(${$pidsRef}{$pid})) {
                 ${$pidsRef}{$pid} = "start";
                 my $command = "";
+
                 my $resDir = "";
                 my $cidDir = "";
+
                 foreach my $data (@dataInfo) {
                     if ($data =~ /\.cwl/) {
                         my $workflow = basename($data);
@@ -270,7 +276,7 @@ sub get_cwltool_exec_process {
                         $cidDir = $data;
                     }
                 }
-                my $contents = $pid."	".$resDir."	".$command." ".$cidDir;
+                my $contents = $pid."	".$resDir."	".$command;
                 my $pidResDirFile = "/tmp/cwl_";
                 $pidResDirFile .= $pid;
                 system("echo '$contents' > $pidResDirFile");
@@ -302,18 +308,18 @@ sub exist_pid {
 
 sub get_cid_lists_from_cidfiles {
 
-    my $resDir = $_[0];
+    my $cidDir = $_[0];
     my $cidsRef = $_[1]; # array reference.
 
-    if (!opendir(RESDIR, "$resDir")) {
-        die "Failed to open directory: $resDir\n";
+    if (!opendir(CIDDIR, "$cidDir")) {
+        die "Failed to open directory: $cidDir\n";
     }
-    while (my $resFile = readdir RESDIR) {
-        chomp($resFile);
-        if ($resFile !~ /\.cid$/) {
+    while (my $cidFile = readdir CIDDIR) {
+        chomp($cidFile);
+        if ($cidFile !~ /\.cid$/) {
             next;
         }
-        my $cid = `cat $resDir/$resFile`;
+        my $cid = `cat $cidDir/$cidFile`;
         push @$cidsRef, $cid;
         # unlink("$resDir/$resFile"); # Do not delete cid files here
     }
