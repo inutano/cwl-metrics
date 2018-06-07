@@ -191,12 +191,10 @@ sub run {
                 }
                 my $dockerPs = "$resDir/docker_ps";
                 system("docker ps -a --no-trunc $cidLine > $dockerPs");
-                ### delete docker containers;
-                foreach $cid (@cids) {
-                    system("docker rm $cid");
-                }
+
                 ### docker-cwllog-generator
                 exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid}, $cidDir);
+
                 ### insert workflow metrics into ES.
                 my $cwlLog = $resDir."/cwl_log.json";
                 send_logs_to_es($cwlLog);
@@ -208,6 +206,11 @@ sub run {
                 unlink($pidResDirPath{$pid});
                 delete $pidResDirPath{$pid};
                 delete $workflowName{$pid};
+
+                ### delete docker containers;
+                foreach $cid (@cids) {
+                    system("docker rm $cid");
+                }
             }
         }
         sleep(5);
