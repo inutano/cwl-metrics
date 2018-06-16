@@ -188,7 +188,7 @@ fetch_data() {
 }
 
 #
-# Exec: init if no arguments metricsified, otherwise select command
+# Exec: init if no arguments specified, otherwise select command
 #
 if [[ $# -eq 0 ]]; then
   init_cwl_metrics
