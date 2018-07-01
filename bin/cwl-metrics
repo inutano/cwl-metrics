@@ -200,10 +200,10 @@ else
       status)
         cwl_metrics_status
         ;;
-      start)
+      up | start)
         start_cwl_metrics
         ;;
-      stop)
+      down | stop)
         stop_cwl_metrics
         ;;
       restart)
