@@ -11,7 +11,7 @@ my $pidFile = "/tmp/cwllog_pid";
 my $dmcDir = "";
 my $esHost = "";
 my $esPort = "";
-my $generatorVersion = "0.1.14";
+my $generatorVersion = "0.1.16";
 
 main();
 
