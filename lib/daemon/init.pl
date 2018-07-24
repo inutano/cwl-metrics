@@ -193,7 +193,7 @@ sub run {
                 system("docker ps -a --no-trunc $cidLine > $dockerPs");
 
                 ### docker-cwllog-generator
-                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid}, $cidDir);
+                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid});
 
                 ### insert workflow metrics into ES.
                 my $cwlLog = $resDir."/cwl_log.json";
@@ -428,21 +428,16 @@ sub exec_cwl_json_log_generator {
     my $cwlName = basename($cwlLog);
     my $cwlDir = dirname($cwlLog);
 
-    # Path to cidfile directory
-    my $cidDir = $_[5];
-
     # Build docker run command
     (my $docker_run_cmd = qq{
       docker run --rm
       -v $resDir:/result
-      -v $cidDir:/ciddir
       -v $dockerPsDir:/docker_ps
       -v $dockerInfoDir:/docker_info
       -v $yamlJsonDir:/job_conf
       -v $cwlDir:/debug_output
       -v /var/run/docker.sock:/var/run/docker.sock
       quay.io/inutano/cwl-log-generator:$generatorVersion
-      --cidfile-dir /ciddir
       --docker-ps /docker_ps/$dockerPsName
       --docker-info /docker_info/$dockerInfoName
       --job-conf /job_conf/$yamlJsonName
