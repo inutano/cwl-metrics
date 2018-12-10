@@ -435,17 +435,13 @@ sub exec_cwl_json_log_generator {
     (my $docker_run_cmd = qq{
       docker run --rm
       -v $resDir:/result
-      -v $cidDir:/ciddir
       -v $dockerPsDir:/docker_ps
       -v $dockerInfoDir:/docker_info
-      -v $yamlJsonDir:/job_conf
       -v $cwlDir:/debug_output
       -v /var/run/docker.sock:/var/run/docker.sock
       quay.io/inutano/cwl-log-generator:$generatorVersion
-      --cidfile-dir /ciddir
       --docker-ps /docker_ps/$dockerPsName
       --docker-info /docker_info/$dockerInfoName
-      --job-conf /job_conf/$yamlJsonName
       --debug-output /debug_output/$cwlName
       --output-dir /result
     }) =~ s/\r?\n {6}/ /mg;
