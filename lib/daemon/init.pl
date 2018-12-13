@@ -193,7 +193,7 @@ sub run {
                 system("docker ps -a --no-trunc $cidLine > $dockerPs");
 
                 ### docker-cwllog-generator
-                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid});
+                exec_cwl_json_log_generator($resDir, $dockerPs, $dockerInfo, $yamlPath{$pid}, $stderrLogPath{$pid}, $cidDir);
 
                 ### insert workflow metrics into ES.
                 my $cwlLog = $resDir."/cwl_log.json";
