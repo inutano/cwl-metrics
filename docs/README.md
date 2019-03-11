@@ -11,9 +11,10 @@ In the era of big genomic data, researchers need more machines as much more data
 - `git`
 - `curl`
 - `perl`
-- `docker`
-- `docker-compose` (version 3)
-- `cwltool`
+- [`docker`](https://www.google.com/search?q=install+docker)
+- [`docker-compose`](https://docs.docker.com/compose/install/) (version 3)
+- [`cwltool`](https://github.com/common-workflow-language/cwltool)
+  - recommended version: `1.0.20180820141117` or later
 
 ## Install
 
