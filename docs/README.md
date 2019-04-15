@@ -6,6 +6,8 @@ In the era of big genomic data, researchers need more machines as much more data
 
 [CWL-metrics](https://github.com/inutano/cwl-metrics) is a framework to collect and analyze computational resource usage of workflow runs based on the CWL. CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data.
 
+The CWL-metrics preprint is available on [bioRxiv](https://doi.org/10.1101/456756). The materials used in the manuscript including Jupyter Notebook is available on [GitHub](https://github.com/inutano/cwl-metrics-manuscript).
+
 ## Prerequisites
 
 - `git`
@@ -171,8 +173,18 @@ container_id    stepname        instance_type   cpu_total_percent       memory_m
 7fc27d4d335a    kallisto_quant   m5.2xlarge             6811197440      2909052928      2956857344      20      1acbecae-5990-11e8-9693-0aafe96a2914    KallistoWorkflow-se.cwl yyabuki/kallisto:0.43.1 0.43.1  success 2951599476
 ```
 
-And you can use any software you like to visualize the result! Below is an example that compared execution time and amount of used memory of the Kallisto workflow executions for 5 samples of different file sizes on 4 different instances.
+And you can use any software you like to visualize the result!
 
-![elapsed time](images/time.png)
+### Visualization
 
-![memory total usage](images/mem.png)
+Below are the visualization examples drawn with [ggplot2](https://ggplot2.tidyverse.org/). The other examples are available with the Jupyter Notebook code on [GitHub](https://github.com/inutano/cwl-metrics-manuscript).
+
+To compare the performance of a tool with different input data and different computing instances, you can visualize the workflow execution duration like below:
+
+![elapsed time](images/kallisto.duration.png)
+
+To compare the resource requirement of tools for similar purposes with same input data, you can visualize the resource usages like below:
+
+![memory total usage](images/ERR204893.mem.png)
+
+For more examples, you can browse the notebook [here](https://nbviewer.jupyter.org/github/inutano/cwl-metrics-manuscript/blob/master/notebook/CWL-metrics%20runtime%20metrics%20analysis.ipynb).
