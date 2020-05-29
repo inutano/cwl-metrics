@@ -2,39 +2,37 @@
 
 [![DOI](https://zenodo.org/badge/130311460.svg)](https://zenodo.org/badge/latestdoi/130311460)
 
-CWL-metrics is a framework to collect and analyze computational resource usage of workflow runs based on the [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-metrics launches a daemon process to catch `cwltool` processes, [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in.
+CWL-metrics is a framework to collect and analyze computational resource usage of workflows defined in [Common Workflow Language (CWL)](https://www.commonwl.org). CWL-metrics provides a command line tool to run a CWL workflow, collect resource usage, and integrate with the workflow information. CWL-metrics uses [Telegraf](https://github.com/influxdata/telegraf) to collect the resource usage via docker API, and [Elasticsearch](https://github.com/elastic/elasticsearch) to store the collected data in. You can specify an Elasticsearch server to send out the collected resource usage.
 
 Visit [github pages](https://inutano.github.io/cwl-metrics/) for more details.
 
 ## Prerequisites
 
-- `git`
-- `curl`
-- `perl`
-- [`docker`](https://www.google.com/search?q=install+docker)
 - [`docker-compose`](https://docs.docker.com/compose/install/) (version 3)
-- [`cwltool`](https://github.com/common-workflow-language/cwltool)
-  - recommended version: `1.0.20180820141117` or later
 
 ## Install
 
-Use `curl` to fetch the install script from GitHub and exec via bash command as:
+Use `curl` to fetch the main bash script from GitHub:
 
 ```
-$ curl "https://raw.githubusercontent.com/inutano/cwl-metrics/master/bin/cwl-metrics" | bash
+$ curl -sLO "https://raw.githubusercontent.com/inutano/cwl-metrics/master/bin/cwl-metrics"
+```
+
+Run your workflow as following:
+
+```
+$ cwl-metrics run <your CWL workflow> <your workflow job configuration>
 ```
 
 This will do followings:
 
-- Check prerequisites
-- Create `$HOME/.cwlmetrics`
-- Fetch required tools
-  - CWL-metrics daemon script (this repository)
-  - [docker-metrics-collector](https://github.com/inutano/docker-metrics-collector) repository
+- Check prerequisites and fetch containers (first time only)
+  - [cwltool docker container](https://hub.docker.com/r/commonworkflowlanguage/cwltool)
+  - [telegraf docker container]()
+  - [Elasticsearch docker container]()
   - [cwl-log-generator](https://github.com/inutano/cwl-log-generator) docker container
   - [cwl-metrics-client](https://github.com/inutano/cwl-metrics-client) docker container
-- Generate config files
-- Run CWL-metrics
+- Run `cwltool` and collect metrics usage
 
 
 ## Troubleshooting
