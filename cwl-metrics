@@ -6,7 +6,8 @@ set -ex
 #
 VERSION="2.0.0.20200617"
 CWLTOOL_CONTAINER_IMAGE="commonworkflowlanguage/cwltool:1.0.20191225192155"
-TELEGRAF_CONTAINER_IMAGE="telegraf:1.5.0-alpine"
+TELEGRAF_VERSION="1.5.0"
+TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 
@@ -16,10 +17,18 @@ TMPDIR="${BASEDIR}/tmp"
 #
 # Functions
 #
-setup() {
+error_if_not_initialized() {
+  if [[ ! -e "${TMPDIR}/docker-compose.yml" ]]; then
+    echo "ERROR: CWL-metrics has not yet been initialized" 1>&2
+    exit 1
+  fi
+}
+
+setup_dmc() {
   init_tmpdir
   set_em_host
   set_em_port
+  create_elasticsearch_dirs
   create_compose_yml
 }
 
@@ -40,6 +49,11 @@ set_em_port() {
   fi
 }
 
+create_elasticsearch_dirs() {
+  mkdir -p "${TMPDIR}/Elasticsearch/data"
+  mkdir -p "${TMPDIR}/Elasticsearch/logs"
+}
+
 create_compose_yml() {
   cat <<EOS > ${TMPDIR}/docker-compose.yml
 version: '3'
@@ -49,9 +63,23 @@ services:
     container_name: cwl-metrics-elasticsearch
     ports:
       - ${CM_ES_PORT}:9200
+    environment:
+      bootstrap.memory_lock: "true"
+      discovery.type: "single-node"
+      ELASTIC_PASSWORD: "cwl-metrics-passwd"
+      ES_JAVA_OPTS: "-Xms1g -Xmx16g -Xlog:disable -Xlog:all=warning:stderr:utctime,level,tags -Xlog:gc=warning:stderr:utctime"
+      TAKE_FILE_OWNERSHIP: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - "${TMPDIR}/Elasticsearch/data:/var/lib/elasticsearch"
-    user: "${UID:-0}:${GID:-0}"
+      - "${TMPDIR}/Elasticsearch/logs:/usr/share/elasticsearch/logs"
+    restart: always
 
   run-dmc:
     depends_on:
@@ -65,7 +93,6 @@ services:
       - "ES_PORT=${CM_ES_PORT}"
     volumes:
       - ${TMPDIR}:/work
-    user: "${UID:-0}:${GID:-0}"
 
   fluentd:
     depends_on:
@@ -83,7 +110,7 @@ services:
       - "fluentd"
       - "--log"
       - "/var/log/fluentd/fluentd.log"
-    user: "${UID:-0}:${GID:-0}"
+    restart: always
 
   telegraf:
     depends_on:
@@ -97,16 +124,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - "TELEGRAF_VERSION=${TELEGRAF_VERSION}"
-    user: "${UID:-0}:${GID:-0}"
+    restart: always
 EOS
 }
 
-run_dmc_stack() {
+run_dmc() {
   cd ${TMPDIR}
   docker-compose --file ${TMPDIR}/docker-compose.yml up -d --build
 }
 
-stop_dmc_stack() {
+stop_dmc() {
   cd ${TMPDIR}
   docker-compose --file ${TMPDIR}/docker-compose.yml down
 }
@@ -116,12 +143,17 @@ run_cwltool() {
   echo "run cwltool via docker container"
 }
 
+collect_metrics() {
+  parse_cwltool_log
+  send_log_to_elasticsearch
+}
+
 parse_cwltool_log() {
   echo "convert log file into json"
 }
 
 send_log_to_elasticsearch() {
-  echo "send json log to elasticsearch"
+  echo "send cwltool json log to elasticsearch"
 }
 
 fetch_metrics() {
@@ -132,30 +164,40 @@ fetch_metrics() {
 # Operation functions
 #
 up() {
-  run_dmc_stack
+  setup_dmc
+  run_dmc
 }
 
 down() {
-  stop_dmc_stack
+  error_if_not_initialized
+  stop_dmc
 }
 
 run() {
-  run_dmc_stack
+  error_if_not_initialized
+  run_dmc
   run_cwltool
   collect_metrics
 }
 
 fetch() {
-  run_dmc_stack
+  error_if_not_initialized
+  run_dmc
   fetch_metrics
 }
 
 status() {
+  error_if_not_initialized
   docker-compose --file ${TMPDIR}/docker-compose.yml ps
 }
 
 logs() {
+  error_if_not_initialized
   docker-compose --file ${TMPDIR}/docker-compose.yml logs
+}
+
+clean() {
+  rm -fr ${TMPDIR}
 }
 
 version() {
@@ -177,6 +219,8 @@ Subcommand:
   run                     Run given workflow via cwltool and collect metrics
   fetch                   Start Virtuoso and load data; add data to the existing
   ps                      Show status of metrics collector containers
+  logs                    Show docker-compose logs
+  clean                   Clean up tmpdir (./tmp)
   help (-h|--help)        Show this help message
   version (-v|--version)  Show version information
 
@@ -235,6 +279,9 @@ main() {
         logs)
           CMD="logs"
           ;;
+        clean)
+          CMD="clean"
+          ;;
         *)
           POSITIONAL+=("$1")
           ;;
@@ -243,7 +290,6 @@ main() {
     done
   fi
 
-  setup
   set -- "${POSITIONAL[@]}"
 
   case ${CMD} in
@@ -267,6 +313,9 @@ main() {
       ;;
     "logs")
       logs
+      ;;
+    "clean")
+      clean
       ;;
   esac
 }
