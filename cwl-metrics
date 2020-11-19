@@ -26,8 +26,9 @@ error_if_not_initialized() {
 
 setup_dmc() {
   init_tmpdir
-  set_em_host
-  set_em_port
+  set_es_host
+  set_es_port
+  set_es_endpoint
   create_elasticsearch_dirs
   create_compose_yml
 }
@@ -37,16 +38,24 @@ init_tmpdir() {
   mkdir -p "${TMPDIR}"
 }
 
-set_em_host() {
-  if [[ -z "${CM_ES_HOST}" ]]; then
-    CM_ES_HOST="elasticsearch"
+set_es_host() {
+  if [[ -z "${ES_HOST}" ]]; then
+    ES_HOST="localhost"
+    ES_HOST_DOCKER="elasticsearch"
+  else
+    ES_HOST_DOCKER="${ES_HOST}"
   fi
 }
 
-set_em_port() {
-  if [[ -z "${CM_ES_PORT}" ]]; then
-    CM_ES_PORT="9200"
+set_es_port() {
+  if [[ -z "${ES_PORT}" ]]; then
+    ES_PORT="9200"
   fi
+}
+
+set_es_endpoint() {
+  ES_EP_METRICS="${ES_HOST}:${ES_PORT}/metrics"
+  ES_EP_WORKFLOW="${ES_HOST}:${ES_PORT}/workflow"
 }
 
 create_elasticsearch_dirs() {
@@ -62,7 +71,7 @@ services:
     image: ${ELASTICSEARCH_CONTAINER_IMAGE}
     container_name: cwl-metrics-elasticsearch
     ports:
-      - ${CM_ES_PORT}:9200
+      - ${ES_PORT}:9200
     environment:
       bootstrap.memory_lock: "true"
       discovery.type: "single-node"
@@ -81,27 +90,14 @@ services:
       - "${TMPDIR}/Elasticsearch/logs:/usr/share/elasticsearch/logs"
     restart: always
 
-  run-dmc:
-    depends_on:
-      - elasticsearch
-    build:
-      context: ${BASEDIR}/docker/run-dmc
-    image: run-dmc
-    container_name: cwl-metrics-run-dmc
-    environment:
-      - "ES_HOST=${CM_ES_HOST}"
-      - "ES_PORT=${CM_ES_PORT}"
-    volumes:
-      - ${TMPDIR}:/work
-
   fluentd:
     depends_on:
-      - run-dmc
+      - elasticsearch
     image: ${FLUENTD_CONTAINER_IMAGE}
     container_name: cwl-metrics-fluentd
     environment:
-      - "ES_HOST=${CM_ES_HOST}"
-      - "ES_PORT=${CM_ES_PORT}"
+      - "ES_HOST=${ES_HOST_DOCKER}"
+      - "ES_PORT=${ES_PORT}"
     volumes:
       - ${BASEDIR}/conf/fluent/fluent.conf:/etc/fluent/fluent.conf:ro
       - ${TMPDIR}/log/fluentd:/var/log/fluentd
@@ -114,7 +110,6 @@ services:
 
   telegraf:
     depends_on:
-      - run-dmc
       - fluentd
     image: ${TELEGRAF_CONTAINER_IMAGE}
     container_name: cwl-metrics-telegraf
@@ -131,6 +126,66 @@ EOS
 run_dmc() {
   cd ${TMPDIR}
   docker-compose --file ${TMPDIR}/docker-compose.yml up -d --build
+  create_index
+  check_index
+}
+
+create_index() {
+  wait_for_es_to_up
+  create_index_metrics
+  create_index_workflow
+}
+
+wait_for_es_to_up() {
+  while [[ -z "$(curl -s ${ES_HOST}:${ES_PORT})" ]]; do
+    sleep 5
+  done
+}
+
+create_index_metrics() {
+  curl -s --header "Content-Type:application/json" -XPUT ${ES_EP_METRICS} -d '{
+    "mappings": {
+      "properties": {
+        "timestamp": {
+          "type": "date",
+          "format": "epoch_second"
+        }
+      }
+    }
+  }'
+}
+
+create_index_workflow() {
+  curl -s --header "Content-Type:application/json" -XPUT ${ES_EP_WORKFLOW} -d '{
+    "settings": {
+      "index.mapping.total_fields.limit": 5000
+    },
+    "mappings": {
+      "properties": {
+        "start_date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss"
+        },
+        "end_date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss"
+        }
+      }
+    }
+  }'
+}
+
+check_index() {
+  check_index_metrics
+  check_index_workflow
+}
+
+check_index_metrics() {
+  curl -s "${ES_EP_METRICS}"
+}
+
+check_index_workflow() {
+  curl -s "${ES_EP_WORKFLOW}"
 }
 
 stop_dmc() {
@@ -251,11 +306,11 @@ main() {
           exit 0
           ;;
         --es-port)
-          CM_ES_PORT=${2}
+          ES_PORT=${2}
           shift
           ;;
         --es-host)
-          CM_ES_HOST=${2}
+          ES_HOST=${2}
           shift
           ;;
         up|start)
