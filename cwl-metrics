@@ -10,34 +10,22 @@ TELEGRAF_CONTAINER_IMAGE="telegraf:1.5.0-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 
-DEFAULT_WORKDIR="${HOME}/.cwl-metrics"
-DEFAULT_TMPDIR="${DEFAULT_WORKDIR}/tmp"
+BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
+TMPDIR="${BASEDIR}/tmp"
 
 #
 # Functions
 #
 setup() {
-  set_workdir
-  set_tmpdir
+  init_tmpdir
   set_em_host
   set_em_port
-  copy_config
   create_compose_yml
 }
 
-set_workdir() {
-  if [[ -z "${CM_WORKDIR}" ]]; then
-    CM_WORKDIR=${DEFAULT_WORKDIR}
-  fi
-  mkdir -p "${CM_WORKDIR}"
-}
-
-set_tmpdir() {
-  if [[ -z "${CM_TMPDIR}" ]]; then
-    CM_TMPDIR=${DEFAULT_TMPDIR}
-  fi
-  rm -fr "${CM_TMPDIR}"
-  mkdir -p "${CM_TMPDIR}"
+init_tmpdir() {
+  rm -fr "${TMPDIR}"
+  mkdir -p "${TMPDIR}"
 }
 
 set_em_host() {
@@ -52,13 +40,8 @@ set_em_port() {
   fi
 }
 
-copy_config() {
-  local conf_dir="$(cd $(dirname ${0}) && pwd -P)/../conf"
-  cp -r ${conf_dir} ${CM_TMPDIR}
-}
-
 create_compose_yml() {
-  cat <<EOS > ${CM_TMPDIR}/docker-compose.yml
+  cat <<EOS > ${TMPDIR}/docker-compose.yml
 version: '3'
 services:
   elasticsearch:
@@ -67,19 +50,21 @@ services:
     ports:
       - ${CM_ES_PORT}:9200
     volumes:
-      - "${CM_TMPDIR}/Elasticsearch/data:/var/lib/elasticsearch"
+      - "${TMPDIR}/Elasticsearch/data:/var/lib/elasticsearch"
     user: "${UID:-0}:${GID:-0}"
 
   run-dmc:
     depends_on:
       - elasticsearch
-    image: quay.io/inutano/run-dmc:0.1.1
+    build:
+      context: ${BASEDIR}/docker/run-dmc
+    image: run-dmc
     container_name: cwl-metrics-run-dmc
     environment:
       - "ES_HOST=${CM_ES_HOST}"
       - "ES_PORT=${CM_ES_PORT}"
     volumes:
-      - ${CM_TMPDIR}:/work
+      - ${TMPDIR}:/work
     user: "${UID:-0}:${GID:-0}"
 
   fluentd:
@@ -91,9 +76,9 @@ services:
       - "ES_HOST=${CM_ES_HOST}"
       - "ES_PORT=${CM_ES_PORT}"
     volumes:
-      - ${CM_TMPDIR}/conf/fluent/fluent.conf:/etc/fluent/fluent.conf:ro
-      - ${CM_TMPDIR}/log/fluentd:/var/log/fluentd
-      - ${CM_TMPDIR}/log/telegraf:/var/log/telegraf
+      - ${BASEDIR}/conf/fluent/fluent.conf:/etc/fluent/fluent.conf:ro
+      - ${TMPDIR}/log/fluentd:/var/log/fluentd
+      - ${TMPDIR}/log/telegraf:/var/log/telegraf
     command:
       - "fluentd"
       - "--log"
@@ -107,8 +92,8 @@ services:
     image: ${TELEGRAF_CONTAINER_IMAGE}
     container_name: cwl-metrics-telegraf
     volumes:
-      - ${CM_TMPDIR}/conf/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${CM_TMPDIR}/log/telegraf:/var/log/telegraf
+      - ${BASEDIR}/conf/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${TMPDIR}/log/telegraf:/var/log/telegraf
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - "TELEGRAF_VERSION=${TELEGRAF_VERSION}"
@@ -117,13 +102,13 @@ EOS
 }
 
 run_dmc_stack() {
-  cd ${CM_TMPDIR}
-  docker-compose --file ${CM_TMPDIR}/docker-compose.yml up -d
+  cd ${TMPDIR}
+  docker-compose --file ${TMPDIR}/docker-compose.yml up -d --build
 }
 
 stop_dmc_stack() {
-  cd ${CM_TMPDIR}
-  docker-compose --file ${CM_TMPDIR}/docker-compose.yml down
+  cd ${TMPDIR}
+  docker-compose --file ${TMPDIR}/docker-compose.yml down
 }
 
 run_cwltool() {
@@ -166,7 +151,11 @@ fetch() {
 }
 
 status() {
-  docker-compose --file ${CM_TMPDIR}/docker-compose.yml ps
+  docker-compose --file ${TMPDIR}/docker-compose.yml ps
+}
+
+logs() {
+  docker-compose --file ${TMPDIR}/docker-compose.yml logs
 }
 
 version() {
@@ -187,15 +176,13 @@ Subcommand:
   down                    Stop metrics collector containers
   run                     Run given workflow via cwltool and collect metrics
   fetch                   Start Virtuoso and load data; add data to the existing
-  status                  Show status of metrics collector containers
+  ps                      Show status of metrics collector containers
   help (-h|--help)        Show this help message
   version (-v|--version)  Show version information
 
 Options:
   --es-port  Set Elasticsearch port number (default: 9200)
   --es-host  Set Elasticsearch host name (default: localhost)
-  --tmpdir   Set tmpdir to process and store log files (default: /tmp/cwl-metrics)
-  --workdir  Set working dir to save intermediate files of workflow (default: ~/.cwlmetrics)
 EOS
 }
 
@@ -227,14 +214,6 @@ main() {
           CM_ES_HOST=${2}
           shift
           ;;
-        --tmpdir)
-          CM_TMPDIR=${2}
-          shift
-          ;;
-        --workdir)
-          CM_WORKDIR=${2}
-          shift
-          ;;
         up|start)
           CMD="up"
           ;;
@@ -252,6 +231,9 @@ main() {
           ;;
         status|ps)
           CMD="status"
+          ;;
+        logs)
+          CMD="logs"
           ;;
         *)
           POSITIONAL+=("$1")
@@ -282,6 +264,9 @@ main() {
       ;;
     "status")
       status
+      ;;
+    "logs")
+      logs
       ;;
   esac
 }
