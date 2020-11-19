@@ -13,13 +13,18 @@ FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
+COMPOSE_YAML="${TMPDIR}/docker-compose.yml"
 
 #
 # Functions
 #
-error_if_not_initialized() {
-  if [[ ! -e "${TMPDIR}/docker-compose.yml" ]]; then
+error_if_not_running() {
+  if [[ ! -e "${COMPOSE_YAML}" ]]; then
     echo "ERROR: CWL-metrics has not yet been initialized" 1>&2
+    exit 1
+  fi
+  if [[ -z $(docker-compose -f "${COMPOSE_YAML}" ps -q) ]]; then
+    echo "ERROR: CWL-metrics is not running" 1>&2
     exit 1
   fi
 }
@@ -34,7 +39,6 @@ setup_dmc() {
 }
 
 init_tmpdir() {
-  rm -fr "${TMPDIR}"
   mkdir -p "${TMPDIR}"
 }
 
@@ -64,7 +68,7 @@ create_elasticsearch_dirs() {
 }
 
 create_compose_yml() {
-  cat <<EOS > ${TMPDIR}/docker-compose.yml
+  cat <<EOS > ${COMPOSE_YAML}
 version: '3'
 services:
   elasticsearch:
@@ -125,7 +129,7 @@ EOS
 
 run_dmc() {
   cd ${TMPDIR}
-  docker-compose --file ${TMPDIR}/docker-compose.yml up -d --build
+  docker-compose --file ${COMPOSE_YAML} up -d --build
   create_index
   check_index
 }
@@ -190,7 +194,7 @@ check_index_workflow() {
 
 stop_dmc() {
   cd ${TMPDIR}
-  docker-compose --file ${TMPDIR}/docker-compose.yml down
+  docker-compose --file ${COMPOSE_YAML} down
 }
 
 run_cwltool() {
@@ -224,31 +228,29 @@ up() {
 }
 
 down() {
-  error_if_not_initialized
+  error_if_not_running
   stop_dmc
 }
 
 run() {
-  error_if_not_initialized
-  run_dmc
+  error_if_not_running
   run_cwltool
   collect_metrics
 }
 
 fetch() {
-  error_if_not_initialized
-  run_dmc
+  error_if_not_running
   fetch_metrics
 }
 
 status() {
-  error_if_not_initialized
-  docker-compose --file ${TMPDIR}/docker-compose.yml ps
+  error_if_not_running
+  docker-compose --file ${COMPOSE_YAML} ps
 }
 
 logs() {
-  error_if_not_initialized
-  docker-compose --file ${TMPDIR}/docker-compose.yml logs
+  error_if_not_running
+  docker-compose --file ${COMPOSE_YAML} logs
 }
 
 clean() {
