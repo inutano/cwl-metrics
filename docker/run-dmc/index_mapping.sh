@@ -13,16 +13,22 @@ done
 
 # Create index mapping
 script_dir="$(cd $(dirname ${0}) && pwd -P)"
+echo "\n"
 echo "Creating index mapping for Workflow metrics.."
 . "${script_dir}/index_mapping_telegraf.sh"
 
+echo "\n"
 echo "Creating index mapping for Workflow description.."
 . "${script_dir}/index_mapping_workflow.sh"
 
 # Check if index properly created
 telegraf_ep="${ES_HOST}:${ES_PORT}/telegraf"
 workflow_ep="${ES_HOST}:${ES_PORT}/workflow"
-echo -e "\n\nIndex mapping done - Endpoint: ${telegraf_ep}"
+
+echo "\n"
+echo "Index mapping done - Endpoint: ${telegraf_ep}"
 curl -s "${telegraf_ep}"
-echo -e "\n\nIndex mapping done - Endpoint: ${workflow_ep}"
+
+echo "\n"
+echo "Index mapping done - Endpoint: ${workflow_ep}"
 curl -s "${workflow_ep}"
