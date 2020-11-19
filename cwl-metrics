@@ -198,8 +198,26 @@ stop_dmc() {
 }
 
 run_cwltool() {
-  echo "create tmpdir for this run"
-  echo "run cwltool via docker container"
+  local params=$(expand_params ${@})
+  create_run_tmp
+  echo "run cwltool via docker container with parameters: ${params}"
+}
+
+expand_params() {
+  for param in ${@}; do
+    if [[ -e ${param} ]]; then
+      printf " %s/%s" $(cd $(dirname ${param}) && pwd -P) $(basename ${param})
+    else
+      printf " %s" ${param}
+    fi
+  done
+  printf "\n"
+}
+
+create_run_tmp() {
+  local run_tmp="${TMPDIR}/$(date "+%Y%m%d%H%M%S")"
+  mkdir -p "${run_tmp}"
+  cd "${run_tmp}"
 }
 
 collect_metrics() {
@@ -234,7 +252,7 @@ down() {
 
 run() {
   error_if_not_running
-  run_cwltool
+  run_cwltool "${@}"
   collect_metrics
 }
 
