@@ -13,7 +13,10 @@ done
 
 # Create index mapping
 script_dir="$(cd $(dirname ${0}) && pwd -P)"
+echo "Creating index mapping for Workflow metrics.."
 . "${script_dir}/index_mapping_telegraf.sh"
+
+echo "Creating index mapping for Workflow description.."
 . "${script_dir}/index_mapping_workflow.sh"
 
 # Check if index properly created
