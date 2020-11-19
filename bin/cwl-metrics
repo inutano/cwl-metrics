@@ -10,7 +10,7 @@ TELEGRAF_CONTAINER_IMAGE="telegraf:1.5.0-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 
-DEFAULT_WORKDIR="${HOME}/.cwlmetrics"
+DEFAULT_WORKDIR="${HOME}/.cwl-metrics"
 DEFAULT_TMPDIR="${DEFAULT_WORKDIR}/tmp"
 
 #
@@ -19,6 +19,8 @@ DEFAULT_TMPDIR="${DEFAULT_WORKDIR}/tmp"
 setup() {
   set_workdir
   set_tmpdir
+  set_em_host
+  set_em_port
   copy_config
   create_compose_yml
 }
@@ -38,6 +40,18 @@ set_tmpdir() {
   mkdir -p "${CM_TMPDIR}"
 }
 
+set_em_host() {
+  if [[ -z "${CM_ES_HOST}" ]]; then
+    CM_ES_HOST="elasticsearch"
+  fi
+}
+
+set_em_port() {
+  if [[ -z "${CM_ES_PORT}" ]]; then
+    CM_ES_PORT="9200"
+  fi
+}
+
 copy_config() {
   local conf_dir="$(cd $(dirname ${0}) && pwd -P)/../conf"
   cp -r ${conf_dir} ${CM_TMPDIR}
@@ -51,7 +65,7 @@ services:
     image: ${ELASTICSEARCH_CONTAINER_IMAGE}
     container_name: cwl-metrics-elasticsearch
     ports:
-      - 9200:9200
+      - ${CM_ES_PORT}:9200
     volumes:
       - "${CM_TMPDIR}/Elasticsearch/data:/var/lib/elasticsearch"
     user: "${UID:-0}:${GID:-0}"
@@ -91,7 +105,7 @@ services:
       - run-dmc
       - fluentd
     image: ${TELEGRAF_CONTAINER_IMAGE}
-    container_name: telegraf
+    container_name: cwl-metrics-telegraf
     volumes:
       - ${CM_TMPDIR}/conf/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${CM_TMPDIR}/log/telegraf:/var/log/telegraf
@@ -105,6 +119,11 @@ EOS
 run_dmc_stack() {
   cd ${CM_TMPDIR}
   docker-compose --file ${CM_TMPDIR}/docker-compose.yml up -d
+}
+
+stop_dmc_stack() {
+  cd ${CM_TMPDIR}
+  docker-compose --file ${CM_TMPDIR}/docker-compose.yml down
 }
 
 run_cwltool() {
@@ -147,7 +166,7 @@ fetch() {
 }
 
 status() {
-  docker-compose --file ${CM_WORKDIR}/docker-compose.yml ps
+  docker-compose --file ${CM_TMPDIR}/docker-compose.yml ps
 }
 
 version() {
@@ -216,10 +235,10 @@ main() {
           CM_WORKDIR=${2}
           shift
           ;;
-        up)
+        up|start)
           CMD="up"
           ;;
-        down)
+        down|stop)
           CMD="down"
           ;;
         run)
@@ -231,7 +250,7 @@ main() {
         test)
           CMD="test"
           ;;
-        status)
+        status|ps)
           CMD="status"
           ;;
         *)
