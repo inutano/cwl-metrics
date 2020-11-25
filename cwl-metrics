@@ -10,6 +10,7 @@ TELEGRAF_VERSION="1.5.0"
 TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
+CWL_LOG_GENERATOR_IMAGE="quay.io/inutano/cwl-log-generator:0.1.23"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
@@ -203,7 +204,7 @@ run_cwltool() {
   local params=$(expand_params ${@})
   local tmpdir=$(create_run_tmp)
   local cmd=$(build_cwltool_cmd "${params}" "${tmpdir}")
-  ${cmd} 2> >(tee ${tmpdir}/cwltool.log >&2)
+  ${cmd} 2> >(tee "${tmpdir}/cwltool.log" >&2)
   echo "${tmpdir}"
 }
 
@@ -253,15 +254,35 @@ EOS
 
 collect_metrics() {
   local run_dir="${1}"
-  local cwltool_log_raw="${run_dir}/cwltool.log"
-  local cwltool_log_json="$(parse_cwltool_log "${cwltool_log_raw}" | tail -n 1)"
+  local cwltool_log_json="$(parse_cwltool_log "${run_dir}" | tail -n 1)"
   send_log_to_elasticsearch "${cwltool_log_json}"
 }
 
 parse_cwltool_log() {
-  local cwltool_log_raw="${1}"
-  echo "convert log file at ${cwltool_log_raw} into json"
+  local run_dir="${1}"
+  local cwltool_log_raw="${run_dir}/cwltool.log"
+  local cmd=$(build_log_generator_cmd "${run_dir}")
+
+  docker ps > "${run_dir}/docker-ps"
+  docker info > "${run_dir}/docker-info"
+  ${cmd}
+
   echo "$(echo ${cwltool_log_raw} | sed -e 's:.log$:.json:')"
+}
+
+build_log_generator_cmd() {
+  local run_dir="$(cd "${1}" && pwd -P)"
+  cat <<EOS
+    docker run -i --rm \
+      -v ${run_dir}:/run_dir \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      ${CWL_LOG_GENERATOR_IMAGE} \
+      --cidfile-dir /run_dir \
+      --docker-ps /run_dir/docker-ps \
+      --docker-info /run_dir/docker-info \
+      --debug-output /run_dir/cwltool.log \
+      --output-dir /run_dir
+EOS
 }
 
 send_log_to_elasticsearch() {
