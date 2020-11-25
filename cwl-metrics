@@ -204,6 +204,7 @@ run_cwltool() {
   local tmpdir=$(create_run_tmp)
   local cmd=$(build_cwltool_cmd "${params}" "${tmpdir}")
   ${cmd} 2> >(tee ${tmpdir}/cwltool.log >&2)
+  echo "${tmpdir}"
 }
 
 check_cwltool() {
@@ -251,16 +252,21 @@ EOS
 }
 
 collect_metrics() {
-  parse_cwltool_log
-  send_log_to_elasticsearch
+  local run_dir="${1}"
+  local cwltool_log_raw="${run_dir}/cwltool.log"
+  local cwltool_log_json="$(parse_cwltool_log "${cwltool_log_raw}" | tail -n 1)"
+  send_log_to_elasticsearch "${cwltool_log_json}"
 }
 
 parse_cwltool_log() {
-  echo "convert log file into json"
+  local cwltool_log_raw="${1}"
+  echo "convert log file at ${cwltool_log_raw} into json"
+  echo "$(echo ${cwltool_log_raw} | sed -e 's:.log$:.json:')"
 }
 
 send_log_to_elasticsearch() {
-  echo "send cwltool json log to elasticsearch"
+  local cwltool_log_json="${1}"
+  echo "send cwltool json log at ${cwltool_log_json} to elasticsearch"
 }
 
 fetch_metrics() {
@@ -282,8 +288,8 @@ down() {
 
 run() {
   error_if_not_running
-  run_cwltool "${@}"
-  collect_metrics
+  local run_dir=$(run_cwltool "${@}" | tail -n 1)
+  collect_metrics "${run_dir}"
 }
 
 fetch() {
