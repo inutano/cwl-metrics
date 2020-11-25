@@ -1,0 +1,2 @@
+metadata_url: https://zenodo.org/record/3371848/files/metadata.txt  # default value of type "string".
+classifier_url: https://zenodo.org/record/3371848/files/gg-13-8-99-nb-classifier.qza  # default value of type "string".
