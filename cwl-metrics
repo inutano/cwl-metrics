@@ -135,6 +135,7 @@ run_dmc() {
 }
 
 create_index() {
+  echo "Creating ElasticSearch indexes.."
   wait_for_es_to_up
   create_index_metrics
   create_index_workflow
@@ -198,9 +199,21 @@ stop_dmc() {
 }
 
 run_cwltool() {
+  check_cwltool
   local params=$(expand_params ${@})
-  create_run_tmp
-  echo "run cwltool via docker container with parameters: ${params}"
+  local tmpdir=$(create_run_tmp)
+  local cmd=$(build_cwltool_cmd "${params}" "${tmpdir}")
+  ${cmd} 2> >(tee ${tmpdir}/cwltool.log >&2)
+}
+
+check_cwltool() {
+  local path=$(which cwltool 2>/dev/null)
+  if [[ -z "${path}" ]]; then
+    echo "ERROR: cwltool executable not found"
+    exit 1
+  else
+    echo "Use $(cwltool --version)"
+  fi
 }
 
 expand_params() {
@@ -218,6 +231,23 @@ create_run_tmp() {
   local run_tmp="${TMPDIR}/$(date "+%Y%m%d%H%M%S")"
   mkdir -p "${run_tmp}"
   cd "${run_tmp}"
+  echo "${run_tmp}"
+}
+
+build_cwltool_cmd() {
+  local params=${1}
+  local tmpdir=${2}
+  cat <<EOS
+    cwltool \
+      --debug \
+      --leave-container \
+      --timestamps \
+      --compute-checksum \
+      --record-container-id \
+      --cidfile-dir ${tmpdir} \
+      --outdir ${tmpdir} \
+      ${params}
+EOS
 }
 
 collect_metrics() {
