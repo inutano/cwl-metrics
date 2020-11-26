@@ -10,7 +10,7 @@ TELEGRAF_VERSION="1.5.0"
 TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
-CWL_LOG_GENERATOR_IMAGE="quay.io/inutano/cwl-log-generator:0.1.23"
+CWL_LOG_GENERATOR_IMAGE="cwl-log-generator:test"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
@@ -275,6 +275,7 @@ build_log_generator_cmd() {
       -v ${run_dir}:/run_dir \
       -v /var/run/docker.sock:/var/run/docker.sock \
       ${CWL_LOG_GENERATOR_IMAGE} \
+      /app/generate_cwl_log \
       --cidfile-dir /run_dir \
       --docker-ps /run_dir/docker-ps \
       --docker-info /run_dir/docker-info \
