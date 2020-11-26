@@ -30,17 +30,10 @@ error_if_not_running() {
   fi
 }
 
-setup_dmc() {
-  init_tmpdir
+setup_elasticsearch() {
   set_es_host
   set_es_port
   set_es_endpoint
-  create_elasticsearch_dirs
-  create_compose_yml
-}
-
-init_tmpdir() {
-  mkdir -p "${TMPDIR}"
 }
 
 set_es_host() {
@@ -62,6 +55,18 @@ set_es_endpoint() {
   ES_EP_METRICS="${ES_HOST}:${ES_PORT}/metrics"
   ES_EP_WORKFLOW="${ES_HOST}:${ES_PORT}/workflow"
 }
+
+setup_dmc() {
+  init_tmpdir
+  create_elasticsearch_dirs
+  setup_elasticsearch
+  create_compose_yml
+}
+
+init_tmpdir() {
+  mkdir -p "${TMPDIR}"
+}
+
 
 create_elasticsearch_dirs() {
   mkdir -p "${TMPDIR}/Elasticsearch/data"
@@ -316,12 +321,14 @@ down() {
 
 run() {
   error_if_not_running
+  setup_elasticsearch
   local run_dir=$(run_cwltool "${@}" | tail -n 1)
   collect_metrics "${run_dir}"
 }
 
 fetch() {
   error_if_not_running
+  setup_elasticsearch
   fetch_metrics
 }
 
