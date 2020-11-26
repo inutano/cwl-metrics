@@ -254,8 +254,8 @@ EOS
 
 collect_metrics() {
   local run_dir="${1}"
-  local cwltool_log_json="$(parse_cwltool_log "${run_dir}" | tail -n 1)"
-  send_log_to_elasticsearch "${cwltool_log_json}"
+  parse_cwltool_log "${run_dir}"
+  send_log_to_elasticsearch "${run_dir}"
 }
 
 parse_cwltool_log() {
@@ -266,8 +266,6 @@ parse_cwltool_log() {
   docker ps > "${run_dir}/docker-ps"
   docker info > "${run_dir}/docker-info"
   ${cmd}
-
-  echo "$(echo ${cwltool_log_raw} | sed -e 's:.log$:.json:')"
 }
 
 build_log_generator_cmd() {
@@ -286,8 +284,16 @@ EOS
 }
 
 send_log_to_elasticsearch() {
-  local cwltool_log_json="${1}"
-  echo "send cwltool json log at ${cwltool_log_json} to elasticsearch"
+  local run_dir="${1}"
+  local cwltool_log_json="${run_dir}/cwl_log.json"
+  local uuid=$(uuidgen)
+  curl \
+    -H "Content-Type: application/json" \
+    -X POST \
+    "${ES_HOST}:${ES_PORT}/workflow/${uuid}?pretty" \
+    --data-binary @"${cwltool_log_json}"
+  echo "${uuid}" > "${run_dir}/run_id.txt"
+  echo "http://${ES_HOST}:${ES_PORT}/workflow/${uuid}" > "${run_dir}/endpoint.txt"
 }
 
 fetch_metrics() {
