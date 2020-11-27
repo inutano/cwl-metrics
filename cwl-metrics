@@ -11,6 +11,7 @@ TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 CWL_LOG_GENERATOR_IMAGE="quay.io/inutano/cwl-log-generator:0.2.0"
+CWL_METRICS_CLIENT_IMAGE="quay.io/inutano/cwl-metrics-client:0.1.12.6"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
@@ -303,7 +304,12 @@ send_log_to_elasticsearch() {
 }
 
 fetch_metrics() {
-  echo "fetch all data from elasticsearch"
+  local format="${1}"
+  docker run -it --rm --network=host \
+    -e ES_HOST=${ES_HOST} \
+    -e ES_PORT=${ES_PORT} \
+    ${CWL_METRICS_CLIENT_IMAGE} \
+    ${format}
 }
 
 #
@@ -329,7 +335,7 @@ run() {
 fetch() {
   error_if_not_running
   setup_elasticsearch
-  fetch_metrics
+  fetch_metrics "${@}"
 }
 
 status() {
@@ -449,7 +455,7 @@ main() {
       run ${@}
       ;;
     "fetch")
-      fetch
+      fetch ${@}
       ;;
     "test")
       test
