@@ -297,7 +297,7 @@ send_log_to_elasticsearch() {
   curl \
     -H "Content-Type: application/json" \
     -X POST \
-    "${ES_HOST}:${ES_PORT}/workflow/${uuid}?pretty" \
+    "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
     --data-binary @"${cwltool_log_json}"
   echo "${uuid}" > "${run_dir}/run_id.txt"
   echo "http://${ES_HOST}:${ES_PORT}/workflow/${uuid}" > "${run_dir}/endpoint.txt"
