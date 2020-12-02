@@ -4,14 +4,14 @@ set -e
 #
 # Variables
 #
-VERSION="2.0.0.20200617"
-CWLTOOL_CONTAINER_IMAGE="commonworkflowlanguage/cwltool:1.0.20191225192155"
+VERSION="2.0.0"
 TELEGRAF_VERSION="1.5.0"
 TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
 CWL_LOG_GENERATOR_IMAGE="ghcr.io/inutano/cwl-log-generator:a02b025"
 CWL_METRICS_CLIENT_IMAGE="ghcr.io/inutano/cwl-metrics-client:c6be6c6"
+# CWLTOOL_CONTAINER_IMAGE="commonworkflowlanguage/cwltool:1.0.20191225192155"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
@@ -56,11 +56,11 @@ printlog() {
 
 error_if_not_running() {
   if [[ ! -e "${COMPOSE_YAML}" ]]; then
-    printlog "ERROR: CWL-metrics has not yet been initialized" "warning"
+    printlog "ERROR: CWL-metrics has not yet been initialized" "danger"
     exit 1
   fi
   if [[ -z $(docker-compose -f "${COMPOSE_YAML}" ps -q) ]]; then
-    printlog "ERROR: CWL-metrics is not running" "warning"
+    printlog "ERROR: CWL-metrics is not running" "danger"
     exit 1
   fi
 }
@@ -437,16 +437,18 @@ clean() {
 
 version() {
   printf "cwl-metrics: ${VERSION}\n"
-  printf "  using cwltool container:  ${CWLTOOL_CONTAINER_IMAGE}\n"
-  printf "        telegraf container: ${TELEGRAF_CONTAINER_IMAGE}\n"
-  printf "        elasticsearch container: ${ELASTICSEARCH_CONTAINER_IMAGE}\n"
+  printf "  Telegraf: ${TELEGRAF_CONTAINER_IMAGE}\n"
+  printf "  ElasticSearch: ${ELASTICSEARCH_CONTAINER_IMAGE}\n"
+  printf "  Log generator: ${CWL_LOG_GENERATOR_IMAGE}\n"
+  printf "  CWL-metrics client: ${CWL_METRICS_CLIENT_IMAGE}\n"
+  # printf "  cwltool container:  ${CWLTOOL_CONTAINER_IMAGE}\n"
 }
 
 help() {
   cat <<EOS
 cwl-metrics: ${VERSION}
 Usage:
-  cwl-metrics [up|down|run|fetch|status|help|version] [options] <wf.cwl> <wf.conf>
+  cwl-metrics [subcommand] [options] <wf.cwl> <wf.conf>
 
 Subcommand:
   up                      Start metrics collector containers
@@ -500,8 +502,16 @@ main() {
       clean)
         CMD="clean"
         ;;
+      version|-v|--version)
+        version
+        exit 0
+        ;;
+      help|-h|--help)
+        help
+        exit 0
+        ;;
       *)
-        echo "CWL-metrics: ERROR: '${subcmd}' is not a command."
+        printlog "ERROR: '${subcmd}' is not a cwl-metrics command." "danger"
         help
         exit 1
         ;;
@@ -511,14 +521,6 @@ main() {
     while [[ $# -gt 0 ]]; do
       arg=${1}
       case ${arg} in
-        version|-v|--version)
-          version
-          exit 0
-          ;;
-        help|-h|--help)
-          help
-          exit 0
-          ;;
         --es-port)
           ES_PORT=${2}
           shift
