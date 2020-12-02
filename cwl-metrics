@@ -45,12 +45,11 @@ printlog() {
   esac
 
   local printfmt="\e[${color}%b\e[0m"
-  local printcontent="[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}"
 
   if [[ -z ${LOGFILE} ]]; then
-    printf ${printfmt} ${printcontent} 1>&2
+    printf ${printfmt} "[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n" 1>&2
   else
-    printf ${printfmt} ${printcontent} > >(tee -a ${LOGFILE} >&2)
+    printf ${printfmt} "[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n" > >(tee -a ${LOGFILE} >&2)
   fi
 }
 
