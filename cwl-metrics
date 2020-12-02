@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 #
 # Variables
@@ -15,21 +15,60 @@ CWL_METRICS_CLIENT_IMAGE="ghcr.io/inutano/cwl-metrics-client:c6be6c6"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
 TMPDIR="${BASEDIR}/tmp"
+LOGDIR="${TMPDIR}/log"
+LOGFILE="${LOGDIR}/cwl-metrics.log"
 COMPOSE_YAML="${TMPDIR}/docker-compose.yml"
 
 #
 # Functions
 #
+printlog() {
+  local message=${1}
+  local level=${2}
+
+  case ${level} in
+    green|success)
+      local color="92m";
+      ;;
+    yellow|warning)
+      local color="93m";
+      ;;
+    red|danger)
+      local color="91m";
+      ;;
+    blue|info)
+      local color="96m";
+      ;;
+    *)
+      local color="0m"
+      ;;
+  esac
+
+  local printfmt="\e[${color}%b\e[0m"
+  local printcontent="[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}"
+
+  if [[ -z ${LOGFILE} ]]; then
+    printf ${printfmt} ${printcontent} 1>&2
+  else
+    printf ${printfmt} ${printcontent} > >(tee -a ${LOGFILE} >&2)
+  fi
+}
+
 error_if_not_running() {
   if [[ ! -e "${COMPOSE_YAML}" ]]; then
-    echo "ERROR: CWL-metrics has not yet been initialized" 1>&2
+    printlog "ERROR: CWL-metrics has not yet been initialized" "warning"
     exit 1
   fi
   if [[ -z $(docker-compose -f "${COMPOSE_YAML}" ps -q) ]]; then
-    echo "ERROR: CWL-metrics is not running" 1>&2
+    printlog "ERROR: CWL-metrics is not running" "warning"
     exit 1
   fi
 }
+
+#
+# Setting: ElasticSearch configuration
+#  Run before each command
+#
 
 setup_elasticsearch() {
   set_es_host
@@ -57,17 +96,39 @@ set_es_endpoint() {
   ES_EP_WORKFLOW="${ES_HOST}:${ES_PORT}/workflow"
 }
 
+#
+# Setting; Docker Metrics Collector configuration
+#   Run once to setup directories
+#
+
 setup_dmc() {
+  check_prerequisites
   init_tmpdir
   create_elasticsearch_dirs
   setup_elasticsearch
   create_compose_yml
 }
 
-init_tmpdir() {
-  mkdir -p "${TMPDIR}"
+check_prerequisites() {
+  check_command_path "docker"
+  check_command_path "docker-compose"
+  check_command_path "curl"
+  check_command_path "cwltool"
 }
 
+check_command_path() {
+  local cmd_name=${1}
+  if [[ -z $(which ${cmd_name}) ]]; then
+    printlog "ERROR: ${cmd_name} not found" "danger"
+    exit 1
+  fi
+}
+
+init_tmpdir() {
+  mkdir -p "${TMPDIR}"
+  mkdir -p "${LOGDIR}"
+  touch "${LOGFILE}"
+}
 
 create_elasticsearch_dirs() {
   mkdir -p "${TMPDIR}/Elasticsearch/data"
@@ -134,6 +195,10 @@ services:
 EOS
 }
 
+#
+# Run adn Stop Docker Metrics Collector, the CWL-metrics core component
+#
+
 run_dmc() {
   cd ${TMPDIR}
   docker-compose --file ${COMPOSE_YAML} up -d --build
@@ -142,7 +207,7 @@ run_dmc() {
 }
 
 create_index() {
-  echo "Creating ElasticSearch indexes.."
+  printlog "Creating ElasticSearch indexes.." "info"
   wait_for_es_to_up
   create_index_metrics
   create_index_workflow
@@ -205,6 +270,10 @@ stop_dmc() {
   docker-compose --file ${COMPOSE_YAML} down
 }
 
+#
+# Wrapper functions to run cwltool
+#
+
 run_cwltool() {
   check_cwltool
   local params=$(expand_params ${@})
@@ -217,7 +286,7 @@ run_cwltool() {
 check_cwltool() {
   local path=$(which cwltool 2>/dev/null)
   if [[ -z "${path}" ]]; then
-    echo "ERROR: cwltool executable not found"
+    printlog "ERROR: cwltool executable not found" "danger"
     exit 1
   else
     echo "Use $(cwltool --version)"
@@ -258,7 +327,11 @@ build_cwltool_cmd() {
 EOS
 }
 
-collect_metrics() {
+#
+# Functions to inspect cwltool log file and seed to ElasticSearch
+#
+
+collect_workflow_log() {
   local run_dir="${1}"
   parse_cwltool_log "${run_dir}"
   send_log_to_elasticsearch "${run_dir}"
@@ -303,8 +376,17 @@ send_log_to_elasticsearch() {
   echo "http://${ES_HOST}:${ES_PORT}/workflow/${uuid}" > "${run_dir}/endpoint.txt"
 }
 
+#
+# Function to feetch metrics
+#
+
 fetch_metrics() {
-  local format="${1}"
+  if [[ -z ${1} ]]; then
+    local format="json"
+  else
+    local format="${1}"
+  fi
+
   docker run -it --rm --network=host \
     -e ES_HOST=${ES_HOST} \
     -e ES_PORT=${ES_PORT} \
@@ -329,7 +411,7 @@ run() {
   error_if_not_running
   setup_elasticsearch
   local run_dir=$(run_cwltool "${@}" | tail -n 1)
-  collect_metrics "${run_dir}"
+  collect_workflow_log "${run_dir}"
 }
 
 fetch() {
@@ -363,7 +445,7 @@ help() {
   cat <<EOS
 cwl-metrics: ${VERSION}
 Usage:
-  cwl-metrics [up|down|run|fetch|status|help|version] <wf.cwl> <wf.conf>
+  cwl-metrics [up|down|run|fetch|status|help|version] [options] <wf.cwl> <wf.conf>
 
 Subcommand:
   up                      Start metrics collector containers
@@ -377,8 +459,8 @@ Subcommand:
   version (-v|--version)  Show version information
 
 Options:
-  --es-port  Set Elasticsearch port number (default: 9200)
   --es-host  Set Elasticsearch host name (default: localhost)
+  --es-port  Set Elasticsearch port number (default: 9200)
 EOS
 }
 
@@ -391,9 +473,43 @@ main() {
     help
     exit 0
   else
+    subcmd=${1}
+    case ${subcmd} in
+      up|start)
+        CMD="up"
+        ;;
+      down|stop)
+        CMD="down"
+        ;;
+      run)
+        CMD="run"
+        ;;
+      fetch)
+        CMD="fetch"
+        ;;
+      test)
+        CMD="test"
+        ;;
+      status|ps)
+        CMD="status"
+        ;;
+      logs)
+        CMD="logs"
+        ;;
+      clean)
+        CMD="clean"
+        ;;
+      *)
+        echo "CWL-metrics: ERROR: '${subcmd}' is not a command."
+        help
+        exit 1
+        ;;
+    esac
+    shift
+
     while [[ $# -gt 0 ]]; do
-      key=${1}
-      case ${key} in
+      arg=${1}
+      case ${arg} in
         version|-v|--version)
           version
           exit 0
@@ -410,32 +526,8 @@ main() {
           ES_HOST=${2}
           shift
           ;;
-        up|start)
-          CMD="up"
-          ;;
-        down|stop)
-          CMD="down"
-          ;;
-        run)
-          CMD="run"
-          ;;
-        fetch)
-          CMD="fetch"
-          ;;
-        test)
-          CMD="test"
-          ;;
-        status|ps)
-          CMD="status"
-          ;;
-        logs)
-          CMD="logs"
-          ;;
-        clean)
-          CMD="clean"
-          ;;
         *)
-          POSITIONAL+=("$1")
+          POSITIONAL+=("${arg}")
           ;;
       esac
       shift
