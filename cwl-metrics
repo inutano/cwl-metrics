@@ -10,7 +10,7 @@ TELEGRAF_VERSION="1.5.0"
 TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
 ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
 FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
-CWL_LOG_GENERATOR_IMAGE="ghcr.io/inutano/cwl-log-generator:fafc29a"
+CWL_LOG_GENERATOR_IMAGE="ghcr.io/inutano/cwl-log-generator:a02b025"
 CWL_METRICS_CLIENT_IMAGE="ghcr.io/inutano/cwl-metrics-client:c6be6c6"
 
 BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
