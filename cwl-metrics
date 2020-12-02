@@ -45,11 +45,12 @@ printlog() {
   esac
 
   local printfmt="\e[${color}%b\e[0m"
+  local content="[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n"
 
   if [[ -z ${LOGFILE} ]]; then
-    printf ${printfmt} "[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n" 1>&2
+    printf ${printfmt} "${content}" 1>&2
   else
-    printf ${printfmt} "[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n" > >(tee -a ${LOGFILE} >&2)
+    printf ${printfmt} "${content}" > >(tee -a ${LOGFILE} >&2)
   fi
 }
 
@@ -267,6 +268,7 @@ check_index_workflow() {
 stop_dmc() {
   cd ${TMPDIR}
   docker-compose --file ${COMPOSE_YAML} down
+  printlog "system stopped." "info"
 }
 
 #
