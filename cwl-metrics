@@ -1,0 +1,573 @@
+#!/bin/bash
+set -e
+
+#
+# Variables
+#
+VERSION="2.0.0"
+TELEGRAF_VERSION="1.5.0"
+TELEGRAF_CONTAINER_IMAGE="telegraf:${TELEGRAF_VERSION}-alpine"
+ELASTICSEARCH_CONTAINER_IMAGE="elasticsearch:7.7.0"
+FLUENTD_CONTAINER_IMAGE="quay.io/inutano/fluentd:0.1.0"
+CWL_LOG_GENERATOR_IMAGE="ghcr.io/inutano/cwl-log-generator:a02b025"
+CWL_METRICS_CLIENT_IMAGE="ghcr.io/inutano/cwl-metrics-client:c6be6c6"
+# CWLTOOL_CONTAINER_IMAGE="commonworkflowlanguage/cwltool:1.0.20191225192155"
+
+BASEDIR="$(cd $(dirname ${0}) && pwd -P)"
+TMPDIR="${BASEDIR}/tmp"
+LOGDIR="${TMPDIR}/log"
+LOGFILE="${LOGDIR}/cwl-metrics.log"
+COMPOSE_YAML="${TMPDIR}/docker-compose.yml"
+
+#
+# Functions
+#
+printlog() {
+  local message=${1}
+  local level=${2}
+
+  case ${level} in
+    green|success)
+      local color="92m";
+      ;;
+    yellow|warning)
+      local color="93m";
+      ;;
+    red|danger)
+      local color="91m";
+      ;;
+    blue|info)
+      local color="96m";
+      ;;
+    *)
+      local color="0m"
+      ;;
+  esac
+
+  local printfmt="\e[${color}%b\e[0m"
+  local content="[$(date +'%Y/%m/%d %H:%M:%S')] CWL-metrics: ${message}\n"
+
+  if [[ -z ${LOGFILE} ]]; then
+    printf ${printfmt} "${content}" 1>&2
+  else
+    printf ${printfmt} "${content}" > >(tee -a ${LOGFILE} >&2)
+  fi
+}
+
+error_if_not_running() {
+  if [[ ! -e "${COMPOSE_YAML}" ]]; then
+    printlog "ERROR: CWL-metrics has not yet been initialized" "danger"
+    exit 1
+  fi
+  if [[ -z $(docker-compose -f "${COMPOSE_YAML}" ps -q) ]]; then
+    printlog "ERROR: CWL-metrics is not running" "danger"
+    exit 1
+  fi
+}
+
+#
+# Setting: ElasticSearch configuration
+#  Run before each command
+#
+
+setup_elasticsearch() {
+  set_es_host
+  set_es_port
+  set_es_endpoint
+}
+
+set_es_host() {
+  if [[ -z "${ES_HOST}" ]]; then
+    ES_HOST="localhost"
+    ES_HOST_DOCKER="elasticsearch"
+  else
+    ES_HOST_DOCKER="${ES_HOST}"
+  fi
+}
+
+set_es_port() {
+  if [[ -z "${ES_PORT}" ]]; then
+    ES_PORT="9200"
+  fi
+}
+
+set_es_endpoint() {
+  ES_EP_METRICS="${ES_HOST}:${ES_PORT}/metrics"
+  ES_EP_WORKFLOW="${ES_HOST}:${ES_PORT}/workflow"
+}
+
+#
+# Setting; Docker Metrics Collector configuration
+#   Run once to setup directories
+#
+
+setup_dmc() {
+  check_prerequisites
+  init_tmpdir
+  create_elasticsearch_dirs
+  setup_elasticsearch
+  create_compose_yml
+}
+
+check_prerequisites() {
+  check_command_path "docker"
+  check_command_path "docker-compose"
+  check_command_path "curl"
+  check_command_path "cwltool"
+}
+
+check_command_path() {
+  local cmd_name=${1}
+  if [[ -z $(which ${cmd_name}) ]]; then
+    printlog "ERROR: ${cmd_name} not found" "danger"
+    exit 1
+  fi
+}
+
+init_tmpdir() {
+  mkdir -p "${TMPDIR}"
+  mkdir -p "${LOGDIR}"
+  touch "${LOGFILE}"
+}
+
+create_elasticsearch_dirs() {
+  mkdir -p "${TMPDIR}/Elasticsearch/data"
+  mkdir -p "${TMPDIR}/Elasticsearch/logs"
+}
+
+create_compose_yml() {
+  cat <<EOS > ${COMPOSE_YAML}
+version: '3'
+services:
+  elasticsearch:
+    image: ${ELASTICSEARCH_CONTAINER_IMAGE}
+    container_name: cwl-metrics-elasticsearch
+    ports:
+      - ${ES_PORT}:9200
+    environment:
+      bootstrap.memory_lock: "true"
+      discovery.type: "single-node"
+      ELASTIC_PASSWORD: "cwl-metrics-passwd"
+      ES_JAVA_OPTS: "-Xms1g -Xmx16g -Xlog:disable -Xlog:all=warning:stderr:utctime,level,tags -Xlog:gc=warning:stderr:utctime"
+      TAKE_FILE_OWNERSHIP: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - "${TMPDIR}/Elasticsearch/data:/var/lib/elasticsearch"
+      - "${TMPDIR}/Elasticsearch/logs:/usr/share/elasticsearch/logs"
+    restart: always
+
+  fluentd:
+    depends_on:
+      - elasticsearch
+    image: ${FLUENTD_CONTAINER_IMAGE}
+    container_name: cwl-metrics-fluentd
+    environment:
+      - "ES_HOST=${ES_HOST_DOCKER}"
+      - "ES_PORT=${ES_PORT}"
+    volumes:
+      - ${BASEDIR}/conf/fluent/fluent.conf:/etc/fluent/fluent.conf:ro
+      - ${TMPDIR}/log/fluentd:/var/log/fluentd
+      - ${TMPDIR}/log/telegraf:/var/log/telegraf
+    command:
+      - "fluentd"
+      - "--log"
+      - "/var/log/fluentd/fluentd.log"
+    restart: always
+
+  telegraf:
+    depends_on:
+      - fluentd
+    image: ${TELEGRAF_CONTAINER_IMAGE}
+    container_name: cwl-metrics-telegraf
+    volumes:
+      - ${BASEDIR}/conf/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${TMPDIR}/log/telegraf:/var/log/telegraf
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "TELEGRAF_VERSION=${TELEGRAF_VERSION}"
+    restart: always
+EOS
+}
+
+#
+# Run adn Stop Docker Metrics Collector, the CWL-metrics core component
+#
+
+run_dmc() {
+  cd ${TMPDIR}
+  docker-compose --file ${COMPOSE_YAML} up -d --build
+  create_index
+  check_index
+}
+
+create_index() {
+  printlog "Creating ElasticSearch indexes.." "info"
+  wait_for_es_to_up
+  create_index_metrics
+  create_index_workflow
+}
+
+wait_for_es_to_up() {
+  while [[ -z "$(curl -s ${ES_HOST}:${ES_PORT})" ]]; do
+    sleep 5
+  done
+}
+
+create_index_metrics() {
+  curl -s --header "Content-Type:application/json" -XPUT ${ES_EP_METRICS} -d '{
+    "mappings": {
+      "properties": {
+        "timestamp": {
+          "type": "date",
+          "format": "epoch_second"
+        }
+      }
+    }
+  }'
+}
+
+create_index_workflow() {
+  curl -s --header "Content-Type:application/json" -XPUT ${ES_EP_WORKFLOW} -d '{
+    "settings": {
+      "index.mapping.total_fields.limit": 5000
+    },
+    "mappings": {
+      "properties": {
+        "start_date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss"
+        },
+        "end_date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss"
+        }
+      }
+    }
+  }'
+}
+
+check_index() {
+  check_index_metrics
+  check_index_workflow
+}
+
+check_index_metrics() {
+  curl -s "${ES_EP_METRICS}"
+}
+
+check_index_workflow() {
+  curl -s "${ES_EP_WORKFLOW}"
+}
+
+stop_dmc() {
+  cd ${TMPDIR}
+  docker-compose --file ${COMPOSE_YAML} down
+  printlog "system stopped." "info"
+}
+
+#
+# Wrapper functions to run cwltool
+#
+
+run_cwltool() {
+  check_cwltool
+  local params=$(expand_params ${@})
+  local tmpdir=$(create_run_tmp)
+  local cmd=$(build_cwltool_cmd "${params}" "${tmpdir}")
+  ${cmd} 2> >(tee "${tmpdir}/cwltool.log" >&2)
+  echo "${tmpdir}"
+}
+
+check_cwltool() {
+  local path=$(which cwltool 2>/dev/null)
+  if [[ -z "${path}" ]]; then
+    printlog "ERROR: cwltool executable not found" "danger"
+    exit 1
+  else
+    echo "Use $(cwltool --version)"
+  fi
+}
+
+expand_params() {
+  for param in ${@}; do
+    if [[ -e ${param} ]]; then
+      printf " %s/%s" $(cd $(dirname ${param}) && pwd -P) $(basename ${param})
+    else
+      printf " %s" ${param}
+    fi
+  done
+  printf "\n"
+}
+
+create_run_tmp() {
+  local run_tmp="${TMPDIR}/$(date "+%Y%m%d%H%M%S")"
+  mkdir -p "${run_tmp}"
+  cd "${run_tmp}"
+  echo "${run_tmp}"
+}
+
+build_cwltool_cmd() {
+  local params=${1}
+  local tmpdir=${2}
+  cat <<EOS
+    cwltool \
+      --debug \
+      --leave-container \
+      --timestamps \
+      --compute-checksum \
+      --record-container-id \
+      --cidfile-dir ${tmpdir} \
+      --outdir ${tmpdir} \
+      ${params}
+EOS
+}
+
+#
+# Functions to inspect cwltool log file and seed to ElasticSearch
+#
+
+collect_workflow_log() {
+  local run_dir="${1}"
+  parse_cwltool_log "${run_dir}"
+  send_log_to_elasticsearch "${run_dir}"
+}
+
+parse_cwltool_log() {
+  local run_dir="${1}"
+  local cwltool_log_raw="${run_dir}/cwltool.log"
+  local cmd=$(build_log_generator_cmd "${run_dir}")
+
+  docker ps > "${run_dir}/docker-ps"
+  docker info > "${run_dir}/docker-info"
+  ${cmd}
+}
+
+build_log_generator_cmd() {
+  local run_dir="$(cd "${1}" && pwd -P)"
+  cat <<EOS
+    docker run -i --rm \
+      -v ${run_dir}:/run_dir \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      ${CWL_LOG_GENERATOR_IMAGE} \
+      /app/generate_cwl_log \
+      --cidfile-dir /run_dir \
+      --docker-ps /run_dir/docker-ps \
+      --docker-info /run_dir/docker-info \
+      --debug-output /run_dir/cwltool.log \
+      --output-dir /run_dir
+EOS
+}
+
+send_log_to_elasticsearch() {
+  local run_dir="${1}"
+  local cwltool_log_json="${run_dir}/cwl_log.json"
+  local uuid=$(uuidgen)
+  curl \
+    -H "Content-Type: application/json" \
+    -X POST \
+    "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
+    --data-binary @"${cwltool_log_json}"
+  echo "${uuid}" > "${run_dir}/run_id.txt"
+  echo "http://${ES_HOST}:${ES_PORT}/workflow/${uuid}" > "${run_dir}/endpoint.txt"
+}
+
+#
+# Function to feetch metrics
+#
+
+fetch_metrics() {
+  if [[ -z ${1} ]]; then
+    local format="json"
+  else
+    local format="${1}"
+  fi
+
+  docker run -it --rm --network=host \
+    -e ES_HOST=${ES_HOST} \
+    -e ES_PORT=${ES_PORT} \
+    ${CWL_METRICS_CLIENT_IMAGE} \
+    ${format}
+}
+
+#
+# Operation functions
+#
+up() {
+  setup_dmc
+  run_dmc
+}
+
+down() {
+  error_if_not_running
+  stop_dmc
+}
+
+run() {
+  error_if_not_running
+  setup_elasticsearch
+  local run_dir=$(run_cwltool "${@}" | tail -n 1)
+  collect_workflow_log "${run_dir}"
+}
+
+fetch() {
+  error_if_not_running
+  setup_elasticsearch
+  fetch_metrics "${@}"
+}
+
+status() {
+  error_if_not_running
+  docker-compose --file ${COMPOSE_YAML} ps
+}
+
+logs() {
+  error_if_not_running
+  docker-compose --file ${COMPOSE_YAML} logs
+}
+
+clean() {
+  rm -fr ${TMPDIR}
+}
+
+version() {
+  printf "cwl-metrics: ${VERSION}\n"
+  printf "  Telegraf: ${TELEGRAF_CONTAINER_IMAGE}\n"
+  printf "  ElasticSearch: ${ELASTICSEARCH_CONTAINER_IMAGE}\n"
+  printf "  Log generator: ${CWL_LOG_GENERATOR_IMAGE}\n"
+  printf "  CWL-metrics client: ${CWL_METRICS_CLIENT_IMAGE}\n"
+  # printf "  cwltool container:  ${CWLTOOL_CONTAINER_IMAGE}\n"
+}
+
+help() {
+  cat <<EOS
+cwl-metrics: ${VERSION}
+Usage:
+  cwl-metrics [subcommand] [options] <wf.cwl> <wf.conf>
+
+Subcommand:
+  up                      Start metrics collector containers
+  down                    Stop metrics collector containers
+  run                     Run given workflow via cwltool and collect metrics
+  fetch                   Start Virtuoso and load data; add data to the existing
+  ps                      Show status of metrics collector containers
+  logs                    Show docker-compose logs
+  clean                   Clean up tmpdir (./tmp)
+  help (-h|--help)        Show this help message
+  version (-v|--version)  Show version information
+
+Options:
+  --es-host  Set Elasticsearch host name (default: localhost)
+  --es-port  Set Elasticsearch port number (default: 9200)
+EOS
+}
+
+#
+# Main funciton
+#
+main() {
+  POSITIONAL=()
+  if [[ $# -eq 0 ]]; then
+    help
+    exit 0
+  else
+    subcmd=${1}
+    case ${subcmd} in
+      up|start)
+        CMD="up"
+        ;;
+      down|stop)
+        CMD="down"
+        ;;
+      run)
+        CMD="run"
+        ;;
+      fetch)
+        CMD="fetch"
+        ;;
+      test)
+        CMD="test"
+        ;;
+      status|ps)
+        CMD="status"
+        ;;
+      logs)
+        CMD="logs"
+        ;;
+      clean)
+        CMD="clean"
+        ;;
+      version|-v|--version)
+        version
+        exit 0
+        ;;
+      help|-h|--help)
+        help
+        exit 0
+        ;;
+      *)
+        printlog "ERROR: '${subcmd}' is not a cwl-metrics command." "danger"
+        help
+        exit 1
+        ;;
+    esac
+    shift
+
+    while [[ $# -gt 0 ]]; do
+      arg=${1}
+      case ${arg} in
+        --es-port)
+          ES_PORT=${2}
+          shift
+          ;;
+        --es-host)
+          ES_HOST=${2}
+          shift
+          ;;
+        *)
+          POSITIONAL+=("${arg}")
+          ;;
+      esac
+      shift
+    done
+  fi
+
+  set -- "${POSITIONAL[@]}"
+
+  case ${CMD} in
+    "up")
+      up
+      ;;
+    "down")
+      down
+      ;;
+    "run")
+      run ${@}
+      ;;
+    "fetch")
+      fetch ${@}
+      ;;
+    "test")
+      test
+      ;;
+    "status")
+      status
+      ;;
+    "logs")
+      logs
+      ;;
+    "clean")
+      clean
+      ;;
+  esac
+}
+
+# invoke main funciton
+if [[ "${BASH_SOURCE[0]}" -ef "$0" ]]; then
+  main ${@}
+fi
